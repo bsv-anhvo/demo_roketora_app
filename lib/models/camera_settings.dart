@@ -1,3 +1,4 @@
+import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:camerawesome/pigeon.dart';
 import 'package:flutter/services.dart';
 
@@ -55,19 +56,30 @@ extension VideoRecordingQualityX on VideoRecordingQuality {
       };
 }
 
-class PhotoResolutionOption {
-  const PhotoResolutionOption({
-    required this.width,
-    required this.height,
+class PhotoAspectRatioOption {
+  const PhotoAspectRatioOption({
+    required this.aspectRatio,
+    required this.label,
   });
 
-  final int width;
-  final int height;
-
-  String get label => '${width}x$height';
-
-  int get megapixels => ((width * height) / 1000000).round();
+  final CameraAspectRatios aspectRatio;
+  final String label;
 }
+
+const List<PhotoAspectRatioOption> kPhotoAspectRatios = [
+  PhotoAspectRatioOption(
+    aspectRatio: CameraAspectRatios.ratio_4_3,
+    label: '4:3',
+  ),
+  PhotoAspectRatioOption(
+    aspectRatio: CameraAspectRatios.ratio_1_1,
+    label: 'Square',
+  ),
+  PhotoAspectRatioOption(
+    aspectRatio: CameraAspectRatios.ratio_16_9,
+    label: '16:9',
+  ),
+];
 
 class VideoFpsOption {
   const VideoFpsOption(this.fps);
@@ -78,7 +90,6 @@ class VideoFpsOption {
 }
 
 const List<VideoRecordingQuality> kVideoQualities = [
-  VideoRecordingQuality.sd,
   VideoRecordingQuality.hd,
   VideoRecordingQuality.fhd,
   VideoRecordingQuality.uhd,

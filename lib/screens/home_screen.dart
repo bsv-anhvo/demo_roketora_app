@@ -1,13 +1,22 @@
-import 'package:demo_roketota_app/screens/camera_screen.dart';
+import 'package:demo_roketota_app/screens/take_photo_screen.dart';
+import 'package:demo_roketota_app/screens/video_record_screen.dart';
 import 'package:flutter/material.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
-  void _openCamera(BuildContext context, CameraDemoMode mode) {
+  void _openTakePhoto(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => CameraScreen(mode: mode),
+        builder: (_) => const TakePhotoScreen(),
+      ),
+    );
+  }
+
+  void _openVideoRecord(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const VideoRecordScreen(),
       ),
     );
   }
@@ -37,29 +46,19 @@ class HomeScreen extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'カメラ機能を選択して、お客様にデモを行う',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-              ),
               const Spacer(),
               _DemoActionButton(
                 icon: Icons.photo_camera_rounded,
-                label: '写真を撮る',
-                subtitle: 'フロント/リアカメラで写真を撮影する',
+                label: 'Take Photo',
                 color: colorScheme.primary,
-                onPressed: () => _openCamera(context, CameraDemoMode.photo),
+                onPressed: () => _openTakePhoto(context),
               ),
               const SizedBox(height: 16),
               _DemoActionButton(
                 icon: Icons.videocam_rounded,
-                label: '動画撮影',
-                subtitle: '音声付き動画を録画する',
+                label: 'Record Video',
                 color: colorScheme.secondary,
-                onPressed: () => _openCamera(context, CameraDemoMode.video),
+                onPressed: () => _openVideoRecord(context),
               ),
               const Spacer(),
             ],
@@ -74,14 +73,12 @@ class _DemoActionButton extends StatelessWidget {
   const _DemoActionButton({
     required this.icon,
     required this.label,
-    required this.subtitle,
     required this.color,
     required this.onPressed,
   });
 
   final IconData icon;
   final String label;
-  final String subtitle;
   final Color color;
   final VoidCallback onPressed;
 
@@ -108,14 +105,6 @@ class _DemoActionButton extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.white.withValues(alpha: 0.9),
                   ),
                 ),
               ],

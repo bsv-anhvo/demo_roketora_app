@@ -20,7 +20,9 @@ class CameraControlPanel extends StatelessWidget {
     this.onFpsTap,
     this.fpsLabel,
     this.showExposureSlider = false,
+    this.showFilterStrip = false,
     this.onToggleExposure,
+    this.onToggleFilter,
   });
 
   final bool isPhotoMode;
@@ -31,10 +33,12 @@ class CameraControlPanel extends StatelessWidget {
   final String? resolutionLabel;
   final String? fpsLabel;
   final bool showExposureSlider;
+  final bool showFilterStrip;
   final VoidCallback onFlashTap;
   final VoidCallback onTimerTap;
   final VoidCallback onPortraitTap;
   final VoidCallback? onToggleExposure;
+  final VoidCallback? onToggleFilter;
   final ValueChanged<double> onExposureChanged;
   final VoidCallback onResolutionTap;
   final VoidCallback? onFpsTap;
@@ -58,7 +62,7 @@ class CameraControlPanel extends StatelessWidget {
             children: [
               _ControlChip(
                 icon: _flashIcon(flash),
-                label: 'Flash ${flash.label}',
+                label: flash.label,
                 onTap: onFlashTap,
               ),
               _ControlChip(
@@ -66,6 +70,12 @@ class CameraControlPanel extends StatelessWidget {
                 label: 'Exposure',
                 isActive: showExposureSlider,
                 onTap: onToggleExposure ?? () {},
+              ),
+              _ControlChip(
+                icon: Icons.auto_awesome_outlined,
+                label: 'Filter',
+                isActive: showFilterStrip,
+                onTap: onToggleFilter ?? () {},
               ),
               if (isPhotoMode) ...[
                 _ControlChip(
@@ -196,44 +206,73 @@ Future<T?> showCameraPickerSheet<T>({
 }) {
   return showModalBottomSheet<T>(
     context: context,
+    isScrollControlled: true,
     backgroundColor: const Color(0xFF1E1E1E),
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
     builder: (context) {
+      final double maxSheetHeight = MediaQuery.sizeOf(context).height * 0.65;
+
       return SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxSheetHeight),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 8),
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
-            ),
-            ...options.map((option) {
-              final bool isSelected = option == selected;
-              return ListTile(
-                title: Text(
-                  labelBuilder(option),
-                  style: TextStyle(
-                    color: isSelected ? Colors.amber : Colors.white,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                trailing: isSelected
-                    ? const Icon(Icons.check, color: Colors.amber)
-                    : null,
-                onTap: () => Navigator.pop(context, option),
-              );
-            }),
-            const SizedBox(height: 8),
-          ],
+              ),
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: options.length,
+                  separatorBuilder: (context, index) => const Divider(
+                    height: 1,
+                    color: Colors.white12,
+                  ),
+                  itemBuilder: (context, index) {
+                    final T option = options[index];
+                    final bool isSelected = option == selected;
+
+                    return ListTile(
+                      dense: true,
+                      title: Text(
+                        labelBuilder(option),
+                        style: TextStyle(
+                          color: isSelected ? Colors.amber : Colors.white,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.normal,
+                        ),
+                      ),
+                      trailing: isSelected
+                          ? const Icon(Icons.check, color: Colors.amber)
+                          : null,
+                      onTap: () => Navigator.pop(context, option),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       );
     },

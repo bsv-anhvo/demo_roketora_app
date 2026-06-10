@@ -12,16 +12,21 @@ class CameraCaptureButton extends StatefulWidget {
     required this.onPhotoTap,
     this.onQuickVideoStart,
     this.onQuickVideoStop,
+    this.recordMaxDuration,
     this.enabled = true,
   });
 
   static const Duration quickRecordMaxDuration = Duration(seconds: 10);
+  static const Duration videoRecordMaxDuration = Duration(seconds: 20);
 
   final CameraState state;
   final bool isPhotoMode;
   final Future<void> Function() onPhotoTap;
   final VoidCallback? onQuickVideoStart;
   final VoidCallback? onQuickVideoStop;
+
+  /// When set in video mode, draws a countdown ring and auto-stops recording.
+  final Duration? recordMaxDuration;
   final bool enabled;
 
   @override
@@ -47,16 +52,19 @@ class _CameraCaptureButtonState extends State<CameraCaptureButton>
       lowerBound: 0.0,
       upperBound: 0.12,
     );
-    _progressController = AnimationController(
-      vsync: this,
-      duration: CameraCaptureButton.quickRecordMaxDuration,
-    )..addStatusListener(_onProgressStatusChanged);
+    _progressController = AnimationController(vsync: this)
+      ..addStatusListener(_onProgressStatusChanged);
   }
 
   void _onProgressStatusChanged(AnimationStatus status) {
-    if (status == AnimationStatus.completed) {
+    if (status != AnimationStatus.completed) return;
+
+    if (_isQuickRecording) {
       _finishQuickRecording();
+      return;
     }
+
+    _autoStopVideoRecording();
   }
 
   @override
@@ -64,6 +72,13 @@ class _CameraCaptureButtonState extends State<CameraCaptureButton>
     _scaleController.dispose();
     _progressController.dispose();
     super.dispose();
+  }
+
+  bool get _showsRecordProgressRing {
+    if (_isQuickRecording) return true;
+    if (widget.isPhotoMode || widget.recordMaxDuration == null) return false;
+    return widget.state is VideoRecordingCameraState ||
+        _progressController.isAnimating;
   }
 
   @override
@@ -87,7 +102,7 @@ class _CameraCaptureButtonState extends State<CameraCaptureButton>
         child: Stack(
           alignment: Alignment.center,
           children: [
-            if (_isQuickRecording)
+            if (_showsRecordProgressRing)
               AnimatedBuilder(
                 animation: _progressController,
                 builder: (context, _) {
@@ -133,8 +148,14 @@ class _CameraCaptureButtonState extends State<CameraCaptureButton>
     }
 
     widget.state.when(
-      onVideoMode: (videoState) => videoState.startRecording(),
-      onVideoRecordingMode: (recordingState) => recordingState.stopRecording(),
+      onVideoMode: (videoState) {
+        videoState.startRecording();
+        _startVideoRecordProgress();
+      },
+      onVideoRecordingMode: (recordingState) {
+        _resetRecordProgress();
+        recordingState.stopRecording();
+      },
     );
   }
 
@@ -149,7 +170,9 @@ class _CameraCaptureButtonState extends State<CameraCaptureButton>
     _wasLongPress = true;
     _scaleController.forward();
     setState(() => _isQuickRecording = true);
-    _progressController.forward(from: 0);
+    _progressController
+      ..duration = CameraCaptureButton.quickRecordMaxDuration
+      ..forward(from: 0);
     widget.onQuickVideoStart!();
   }
 
@@ -160,11 +183,41 @@ class _CameraCaptureButtonState extends State<CameraCaptureButton>
   void _finishQuickRecording() {
     if (!_isQuickRecording) return;
 
-    _progressController.stop();
-    _progressController.reset();
+    _resetRecordProgress();
     _scaleController.reverse();
     setState(() => _isQuickRecording = false);
     widget.onQuickVideoStop?.call();
+  }
+
+  void _startVideoRecordProgress() {
+    final Duration? maxDuration = widget.recordMaxDuration;
+    if (maxDuration == null) return;
+
+    _progressController
+      ..duration = maxDuration
+      ..forward(from: 0);
+    setState(() {});
+  }
+
+  void _resetRecordProgress() {
+    _progressController
+      ..stop()
+      ..reset();
+  }
+
+  void _autoStopVideoRecording() {
+    if (widget.isPhotoMode || widget.recordMaxDuration == null) return;
+
+    _resetRecordProgress();
+    HapticFeedback.mediumImpact();
+    widget.state.when(
+      onVideoRecordingMode: (recordingState) => recordingState.stopRecording(),
+      onPhotoMode: (_) {},
+      onVideoMode: (_) {},
+      onPreviewMode: (_) {},
+      onAnalysisOnlyMode: (_) {},
+    );
+    if (mounted) setState(() {});
   }
 }
 
