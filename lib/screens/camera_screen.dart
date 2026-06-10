@@ -7,6 +7,7 @@ import 'package:demo_roketota_app/utils/camera_zoom_helper.dart';
 import 'package:demo_roketota_app/utils/media_path_builder.dart';
 import 'package:demo_roketota_app/widgets/camera/camera_capture_button.dart';
 import 'package:demo_roketota_app/widgets/camera/camera_control_panel.dart';
+import 'package:demo_roketota_app/widgets/camera/ios_style_zoom_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -32,7 +33,7 @@ class _CameraScreenState extends State<CameraScreen> {
   bool _portraitEnabled = false;
   double _exposure = 0.5;
   bool _showExposureSlider = false;
-  ZoomRange? _zoomRange;
+  ZoomRange _zoomRange = CameraZoomHelper.fallbackRange;
   double _displayZoom = 1.0;
 
   List<PhotoResolutionOption> _photoResolutions = [];
@@ -46,6 +47,7 @@ class _CameraScreenState extends State<CameraScreen> {
   bool _pendingQuickVideoStart = false;
   bool _isCapturing = false;
   bool _cameraReady = false;
+  bool _zoomRangeLoaded = false;
 
   bool get _isPhotoMode => widget.mode == CameraDemoMode.photo;
 
@@ -53,7 +55,6 @@ class _CameraScreenState extends State<CameraScreen> {
   void initState() {
     super.initState();
     _applyOrientations();
-    _loadZoomRange();
   }
 
   @override
@@ -69,13 +70,18 @@ class _CameraScreenState extends State<CameraScreen> {
     super.dispose();
   }
 
-  Future<void> _loadZoomRange() async {
+  Future<void> _refreshZoomRange(CameraState state) async {
     final ZoomRange range = await CameraZoomHelper.load();
     if (!mounted) return;
+
+    final double initialZoom = CameraZoomHelper.defaultDisplayZoom(range);
+
     setState(() {
       _zoomRange = range;
-      _displayZoom = range.displayMin.clamp(range.displayMin, range.displayMax);
+      _displayZoom = initialZoom;
     });
+
+    await _applyZoom(state.sensorConfig, initialZoom);
   }
 
   void _applyOrientations() {
@@ -147,11 +153,10 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   Future<void> _applyZoom(SensorConfig sensorConfig, double displayZoom) async {
-    final ZoomRange? range = _zoomRange;
-    if (range == null) return;
-    final double normalized = range.toNormalized(displayZoom);
+    final double clamped = _zoomRange.clampDisplayZoom(displayZoom);
+    final double normalized = _zoomRange.toNormalized(clamped);
     await sensorConfig.setZoom(normalized);
-    setState(() => _displayZoom = displayZoom);
+    if (mounted) setState(() => _displayZoom = clamped);
   }
 
   Future<void> _applyPortraitMode(CameraState state) async {
@@ -257,6 +262,11 @@ class _CameraScreenState extends State<CameraScreen> {
       state.startRecording();
     }
 
+    if (!_zoomRangeLoaded) {
+      _zoomRangeLoaded = true;
+      unawaited(_refreshZoomRange(state));
+    }
+
     if (_cameraReady) return;
     _cameraReady = true;
 
@@ -265,9 +275,6 @@ class _CameraScreenState extends State<CameraScreen> {
     }
 
     state.sensorConfig.setBrightness(_exposure);
-    if (_zoomRange != null) {
-      _applyZoom(state.sensorConfig, _displayZoom);
-    }
   }
 
   Future<void> _pickPhotoResolution() async {
@@ -299,6 +306,7 @@ class _CameraScreenState extends State<CameraScreen> {
       setState(() {
         _videoQuality = picked;
         _cameraReady = false;
+        _zoomRangeLoaded = false;
       });
     }
   }
@@ -316,6 +324,7 @@ class _CameraScreenState extends State<CameraScreen> {
       setState(() {
         _videoFps = picked;
         _cameraReady = false;
+        _zoomRangeLoaded = false;
       });
     }
   }
@@ -394,7 +403,18 @@ class _CameraScreenState extends State<CameraScreen> {
             ),
             enablePhysicalButton: true,
             previewFit: CameraPreviewFit.cover,
+            theme: AwesomeTheme(
+              bottomActionsBackgroundColor: Colors.transparent,
+            ),
             availableFilters: null,
+            onPreviewScaleBuilder: (state) => OnPreviewScale(
+              onScale: (normalized) {
+                final double display =
+                    _zoomRange.clampDisplayZoom(_zoomRange.toDisplay(normalized));
+                setState(() => _displayZoom = display);
+                state.sensorConfig.setZoom(normalized);
+              },
+            ),
             onMediaCaptureEvent: (event) => _handleCaptureEvent(context, event),
             topActionsBuilder: (state) {
               state.when(
@@ -458,8 +478,6 @@ class _CameraScreenState extends State<CameraScreen> {
             timer: _timer,
             portraitEnabled: _portraitEnabled,
             exposure: _exposure,
-            zoomRange: _zoomRange,
-            displayZoom: _displayZoom,
             showExposureSlider: _showExposureSlider,
             resolutionLabel: _isPhotoMode
                 ? (_selectedPhotoResolution?.label ?? 'Resolution')
@@ -476,7 +494,6 @@ class _CameraScreenState extends State<CameraScreen> {
               setState(() => _exposure = value);
               state.sensorConfig.setBrightness(value);
             },
-            onZoomChanged: (value) => _applyZoom(state.sensorConfig, value),
             onTimerTap: () => setState(() => _timer = _timer.next),
             onPortraitTap: () async {
               setState(() => _portraitEnabled = !_portraitEnabled);
@@ -503,16 +520,27 @@ class _CameraScreenState extends State<CameraScreen> {
 
   Widget _buildBottomBar(CameraState state) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: CameraCaptureButton(
-        state: state,
-        isPhotoMode: _isPhotoMode,
-        enabled: !_isCapturing && _countdown == null,
-        onPhotoTap: () async {
-          await state.when(onPhotoMode: _handlePhotoCapture);
-        },
-        onQuickVideoStart: () => _handleQuickVideoStart(state),
-        onQuickVideoStop: () => _handleQuickVideoStop(state),
+      padding: const EdgeInsets.only(top: 8, bottom: 12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IosStyleZoomSelector(
+            range: _zoomRange,
+            displayZoom: _displayZoom,
+            onZoomSelected: (zoom) => _applyZoom(state.sensorConfig, zoom),
+          ),
+          const SizedBox(height: 16),
+          CameraCaptureButton(
+            state: state,
+            isPhotoMode: _isPhotoMode,
+            enabled: !_isCapturing && _countdown == null,
+            onPhotoTap: () async {
+              await state.when(onPhotoMode: _handlePhotoCapture);
+            },
+            onQuickVideoStart: () => _handleQuickVideoStart(state),
+            onQuickVideoStop: () => _handleQuickVideoStop(state),
+          ),
+        ],
       ),
     );
   }

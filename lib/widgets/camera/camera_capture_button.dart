@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -13,6 +15,8 @@ class CameraCaptureButton extends StatefulWidget {
     this.enabled = true,
   });
 
+  static const Duration quickRecordMaxDuration = Duration(seconds: 10);
+
   final CameraState state;
   final bool isPhotoMode;
   final Future<void> Function() onPhotoTap;
@@ -25,9 +29,14 @@ class CameraCaptureButton extends StatefulWidget {
 }
 
 class _CameraCaptureButtonState extends State<CameraCaptureButton>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late AnimationController _scaleController;
+  late AnimationController _progressController;
   bool _isQuickRecording = false;
+  bool _wasLongPress = false;
+
+  static const double _buttonSize = 80;
+  static const double _ringSize = 96;
 
   @override
   void initState() {
@@ -38,11 +47,22 @@ class _CameraCaptureButtonState extends State<CameraCaptureButton>
       lowerBound: 0.0,
       upperBound: 0.12,
     );
+    _progressController = AnimationController(
+      vsync: this,
+      duration: CameraCaptureButton.quickRecordMaxDuration,
+    )..addStatusListener(_onProgressStatusChanged);
+  }
+
+  void _onProgressStatusChanged(AnimationStatus status) {
+    if (status == AnimationStatus.completed) {
+      _finishQuickRecording();
+    }
   }
 
   @override
   void dispose() {
     _scaleController.dispose();
+    _progressController.dispose();
     super.dispose();
   }
 
@@ -54,7 +74,7 @@ class _CameraCaptureButtonState extends State<CameraCaptureButton>
     return GestureDetector(
       onTapDown: widget.enabled ? (_) => _scaleController.forward() : null,
       onTapUp: widget.enabled ? (_) => _onTapUp() : null,
-      onTapCancel: widget.enabled ? () => _scaleController.reverse() : null,
+      onTapCancel: widget.enabled ? _onTapCancel : null,
       onLongPressStart: widget.enabled && widget.isPhotoMode
           ? (_) => _onLongPressStart()
           : null,
@@ -62,16 +82,37 @@ class _CameraCaptureButtonState extends State<CameraCaptureButton>
           ? (_) => _onLongPressEnd()
           : null,
       child: SizedBox(
-        height: 80,
-        width: 80,
-        child: Transform.scale(
-          scale: scale,
-          child: CustomPaint(
-            painter: _CaptureButtonPainter(
-              isVideoMode: !widget.isPhotoMode,
-              isRecording: isRecording || _isQuickRecording,
+        height: _ringSize,
+        width: _ringSize,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            if (_isQuickRecording)
+              AnimatedBuilder(
+                animation: _progressController,
+                builder: (context, _) {
+                  return CustomPaint(
+                    size: const Size(_ringSize, _ringSize),
+                    painter: _ProgressRingPainter(
+                      progress: _progressController.value,
+                    ),
+                  );
+                },
+              ),
+            Transform.scale(
+              scale: scale,
+              child: SizedBox(
+                height: _buttonSize,
+                width: _buttonSize,
+                child: CustomPaint(
+                  painter: _CaptureButtonPainter(
+                    isVideoMode: !widget.isPhotoMode,
+                    isRecording: isRecording || _isQuickRecording,
+                  ),
+                ),
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -81,7 +122,10 @@ class _CameraCaptureButtonState extends State<CameraCaptureButton>
     HapticFeedback.selectionClick();
     _scaleController.reverse();
 
-    if (!widget.enabled) return;
+    if (!widget.enabled || _wasLongPress) {
+      _wasLongPress = false;
+      return;
+    }
 
     if (widget.isPhotoMode) {
       await widget.onPhotoTap();
@@ -94,19 +138,73 @@ class _CameraCaptureButtonState extends State<CameraCaptureButton>
     );
   }
 
+  void _onTapCancel() {
+    _scaleController.reverse();
+    _wasLongPress = false;
+  }
+
   void _onLongPressStart() {
     if (widget.onQuickVideoStart == null) return;
     HapticFeedback.mediumImpact();
+    _wasLongPress = true;
     _scaleController.forward();
     setState(() => _isQuickRecording = true);
+    _progressController.forward(from: 0);
     widget.onQuickVideoStart!();
   }
 
   void _onLongPressEnd() {
-    _scaleController.reverse();
+    _finishQuickRecording();
+  }
+
+  void _finishQuickRecording() {
     if (!_isQuickRecording) return;
+
+    _progressController.stop();
+    _progressController.reset();
+    _scaleController.reverse();
     setState(() => _isQuickRecording = false);
     widget.onQuickVideoStop?.call();
+  }
+}
+
+class _ProgressRingPainter extends CustomPainter {
+  const _ProgressRingPainter({required this.progress});
+
+  final double progress;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Offset center = Offset(size.width / 2, size.height / 2);
+    final double radius = size.width / 2 - 5;
+    final Rect arcRect = Rect.fromCircle(center: center, radius: radius);
+
+    final Paint trackPaint = Paint()
+      ..color = Colors.white24
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4;
+
+    final Paint progressPaint = Paint()
+      ..color = Colors.redAccent
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawCircle(center, radius, trackPaint);
+    if (progress > 0) {
+      canvas.drawArc(
+        arcRect,
+        -math.pi / 2,
+        2 * math.pi * progress,
+        false,
+        progressPaint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ProgressRingPainter oldDelegate) {
+    return oldDelegate.progress != progress;
   }
 }
 

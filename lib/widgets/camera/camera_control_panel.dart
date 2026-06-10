@@ -1,5 +1,4 @@
 import 'package:demo_roketota_app/models/camera_settings.dart';
-import 'package:demo_roketota_app/utils/camera_zoom_helper.dart';
 import 'package:flutter/material.dart';
 
 typedef SettingTapCallback<T> = void Function(T value);
@@ -12,13 +11,10 @@ class CameraControlPanel extends StatelessWidget {
     required this.timer,
     required this.portraitEnabled,
     required this.exposure,
-    required this.zoomRange,
-    required this.displayZoom,
     required this.onFlashTap,
     required this.onTimerTap,
     required this.onPortraitTap,
     required this.onExposureChanged,
-    required this.onZoomChanged,
     required this.onResolutionTap,
     this.resolutionLabel,
     this.onFpsTap,
@@ -32,8 +28,6 @@ class CameraControlPanel extends StatelessWidget {
   final PhotoTimerOption timer;
   final bool portraitEnabled;
   final double exposure;
-  final ZoomRange? zoomRange;
-  final double displayZoom;
   final String? resolutionLabel;
   final String? fpsLabel;
   final bool showExposureSlider;
@@ -42,7 +36,6 @@ class CameraControlPanel extends StatelessWidget {
   final VoidCallback onPortraitTap;
   final VoidCallback? onToggleExposure;
   final ValueChanged<double> onExposureChanged;
-  final ValueChanged<double> onZoomChanged;
   final VoidCallback onResolutionTap;
   final VoidCallback? onFpsTap;
 
@@ -56,14 +49,6 @@ class CameraControlPanel extends StatelessWidget {
           _ExposureSlider(
             value: exposure,
             onChanged: onExposureChanged,
-          ),
-          const SizedBox(height: 8),
-        ],
-        if (zoomRange != null) ...[
-          _ZoomSlider(
-            range: zoomRange!,
-            displayZoom: displayZoom,
-            onChanged: onZoomChanged,
           ),
           const SizedBox(height: 8),
         ],
@@ -195,51 +180,6 @@ class _ExposureSlider extends StatelessWidget {
           Text(
             '${(value * 100).round()}%',
             style: const TextStyle(color: Colors.white70, fontSize: 12),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ZoomSlider extends StatelessWidget {
-  const _ZoomSlider({
-    required this.range,
-    required this.displayZoom,
-    required this.onChanged,
-  });
-
-  final ZoomRange range;
-  final double displayZoom;
-  final ValueChanged<double> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.black45,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Text(
-            '${range.displayMin.toStringAsFixed(1)}x',
-            style: const TextStyle(color: Colors.white70, fontSize: 11),
-          ),
-          Expanded(
-            child: Slider(
-              value: displayZoom.clamp(range.displayMin, range.displayMax),
-              min: range.displayMin,
-              max: range.displayMax,
-              divisions: ((range.displayMax - range.displayMin) * 10).round().clamp(1, 25),
-              activeColor: Colors.white,
-              onChanged: onChanged,
-            ),
-          ),
-          Text(
-            '${displayZoom.toStringAsFixed(1)}x',
-            style: const TextStyle(color: Colors.white, fontSize: 12),
           ),
         ],
       ),
