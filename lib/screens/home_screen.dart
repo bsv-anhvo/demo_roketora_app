@@ -39,7 +39,7 @@ class HomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Chọn chức năng camera để demo cho khách hàng',
+                'カメラ機能を選択して、お客様にデモを行う',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: colorScheme.onSurfaceVariant,
@@ -48,16 +48,16 @@ class HomeScreen extends StatelessWidget {
               const Spacer(),
               _DemoActionButton(
                 icon: Icons.photo_camera_rounded,
-                label: 'Take Photo',
-                subtitle: 'Chụp ảnh với camera sau',
+                label: '写真を撮る',
+                subtitle: 'フロント/リアカメラで写真を撮影する',
                 color: colorScheme.primary,
                 onPressed: () => _openCamera(context, CameraDemoMode.photo),
               ),
               const SizedBox(height: 16),
               _DemoActionButton(
                 icon: Icons.videocam_rounded,
-                label: 'Video Record',
-                subtitle: 'Quay video có âm thanh',
+                label: '動画撮影',
+                subtitle: '音声付き動画を録画する',
                 color: colorScheme.secondary,
                 onPressed: () => _openCamera(context, CameraDemoMode.video),
               ),
