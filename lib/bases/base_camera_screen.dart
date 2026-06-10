@@ -7,6 +7,7 @@ import 'package:demo_roketota_app/screens/media_preview_screen.dart';
 import 'package:demo_roketota_app/utils/camera_zoom_helper.dart';
 import 'package:demo_roketota_app/widgets/camera/aspect_ratio_preview_overlay.dart';
 import 'package:demo_roketota_app/widgets/camera/camera_filter_strip.dart';
+import 'package:demo_roketota_app/widgets/camera/camera_settings_toggle_button.dart';
 import 'package:demo_roketota_app/widgets/camera/ios_style_zoom_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -21,6 +22,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase> extends State<T
   double exposure = 0.5;
   bool showExposureSlider = false;
   bool showFilterStrip = false;
+  bool showControlPanel = false;
   bool isOpeningPreview = false;
   ZoomRange zoomRange = CameraZoomHelper.fallbackRange;
   double displayZoom = 1.0;
@@ -61,6 +63,23 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase> extends State<T
 
   void applyOrientations() {
     SystemChrome.setPreferredOrientations(kCameraOrientations);
+  }
+
+  void toggleControlPanel() {
+    setState(() {
+      showControlPanel = !showControlPanel;
+      if (!showControlPanel) {
+        showExposureSlider = false;
+        showFilterStrip = false;
+      }
+    });
+  }
+
+  Widget buildMiddleContentWrapper(CameraState state) {
+    if (!showControlPanel) {
+      return const Column(children: [Spacer()]);
+    }
+    return buildMiddleContent(state);
   }
 
   FlashMode get flashMode => switch (flash) {
@@ -189,7 +208,10 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase> extends State<T
               ),
             ),
           ),
-          const SizedBox(width: 48),
+          CameraSettingsToggleButton(
+            isActive: showControlPanel,
+            onTap: toggleControlPanel,
+          ),
         ],
       ),
     );
@@ -296,7 +318,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase> extends State<T
                         );
                         return const SizedBox.shrink();
                       },
-                      middleContentBuilder: buildMiddleContent,
+                      middleContentBuilder: buildMiddleContentWrapper,
                       bottomActionsBuilder: buildBottomBar,
                     ),
                   ),
