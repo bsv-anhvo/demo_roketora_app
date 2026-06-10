@@ -80,7 +80,7 @@ class CameraControlPanel extends StatelessWidget {
               if (isPhotoMode) ...[
                 _ControlChip(
                   icon: Icons.timer_outlined,
-                  label: 'Timer ${timer.label}',
+                  label: timer.label,
                   onTap: onTimerTap,
                 ),
                 _ControlChip(
