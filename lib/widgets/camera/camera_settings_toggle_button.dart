@@ -18,8 +18,6 @@ class CameraSettingsToggleButton extends StatelessWidget {
         isActive ? Icons.tune_rounded : Icons.tune_outlined,
         color: isActive ? Colors.white : Colors.white70,
       ),
-      iconSize: 32,
-      tooltip: 'Settings',
     );
   }
 }

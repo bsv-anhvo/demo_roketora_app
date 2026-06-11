@@ -1,4 +1,5 @@
 import 'package:demo_roketota_app/models/camera_settings.dart';
+import 'package:demo_roketota_app/utils/strings.dart';
 import 'package:flutter/material.dart';
 
 typedef SettingTapCallback<T> = void Function(T value);
@@ -67,13 +68,13 @@ class CameraControlPanel extends StatelessWidget {
               ),
               _ControlChip(
                 icon: Icons.brightness_6_outlined,
-                label: 'Exposure',
+                label: Strings.labelExposure,
                 isActive: showExposureSlider,
                 onTap: onToggleExposure ?? () {},
               ),
               _ControlChip(
                 icon: Icons.auto_awesome_outlined,
-                label: 'Filter',
+                label: Strings.labelFilter,
                 isActive: showFilterStrip,
                 onTap: onToggleFilter ?? () {},
               ),
@@ -85,20 +86,20 @@ class CameraControlPanel extends StatelessWidget {
                 ),
                 _ControlChip(
                   icon: Icons.face_retouching_natural_outlined,
-                  label: 'Portrait',
+                  label: Strings.labelPortrait,
                   isActive: portraitEnabled,
                   onTap: onPortraitTap,
                 ),
               ],
               _ControlChip(
                 icon: Icons.hd_outlined,
-                label: resolutionLabel ?? 'Resolution',
+                label: resolutionLabel ?? Strings.labelResolution,
                 onTap: onResolutionTap,
               ),
               if (!isPhotoMode && onFpsTap != null)
                 _ControlChip(
                   icon: Icons.speed_outlined,
-                  label: fpsLabel ?? 'FPS',
+                  label: fpsLabel ?? Strings.labelFps,
                   onTap: onFpsTap!,
                 ),
             ],

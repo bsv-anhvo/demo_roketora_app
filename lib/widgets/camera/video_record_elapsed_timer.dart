@@ -1,4 +1,6 @@
+import 'package:demo_roketota_app/utils/strings.dart';
 import 'package:flutter/material.dart';
+import 'package:sprintf/sprintf.dart';
 
 class VideoRecordElapsedTimer extends StatelessWidget {
   const VideoRecordElapsedTimer({
@@ -37,7 +39,7 @@ class VideoRecordElapsedTimer extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Text(
-              '${_format(elapsed)} / ${_format(maxDuration)}',
+              sprintf(Strings.labelTimeRecord, [_format(elapsed), _format(maxDuration)]),
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 16,

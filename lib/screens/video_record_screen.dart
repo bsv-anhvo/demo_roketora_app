@@ -1,29 +1,41 @@
-import 'dart:async';
-
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:camerawesome/pigeon.dart';
-import 'package:demo_roketota_app/models/camera_settings.dart';
 import 'package:demo_roketota_app/bases/base_camera_screen.dart';
+import 'package:demo_roketota_app/models/camera_settings.dart';
+import 'package:demo_roketota_app/providers/camera/camera_ui_actions_mixin.dart';
+import 'package:demo_roketota_app/providers/camera/camera_ui_state.dart';
+import 'package:demo_roketota_app/providers/camera/video_record_notifier.dart';
+import 'package:demo_roketota_app/providers/camera/video_record_state.dart';
 import 'package:demo_roketota_app/utils/media_path_builder.dart';
+import 'package:demo_roketota_app/utils/strings.dart';
+import 'package:demo_roketota_app/widgets/other/app_loading_overlay.dart';
 import 'package:demo_roketota_app/widgets/camera/camera_capture_button.dart';
 import 'package:demo_roketota_app/widgets/camera/camera_control_panel.dart';
 import 'package:demo_roketota_app/widgets/camera/video_record_elapsed_timer.dart';
 import 'package:flutter/material.dart';
+import 'package:gap/gap.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sprintf/sprintf.dart';
 
 class VideoRecordScreen extends CameraScreenBase {
   const VideoRecordScreen({super.key});
 
   @override
-  State<VideoRecordScreen> createState() => _VideoRecordScreenState();
+  ConsumerState<VideoRecordScreen> createState() => _VideoRecordScreenState();
 }
 
 class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen> {
-  VideoRecordingQuality videoQuality = VideoRecordingQuality.fhd;
-  VideoFpsOption videoFps = kVideoFpsOptions[1];
+  String? _processingMessage;
 
-  Timer? _recordTimer;
-  Duration _recordElapsed = Duration.zero;
-  bool _isRecording = false;
+  VideoRecordNotifier get _notifier => ref.read(videoRecordProvider.notifier);
+
+  VideoRecordState get _videoState => ref.watch(videoRecordProvider);
+
+  @override
+  CameraUiHost get cameraHost => _notifier;
+
+  @override
+  CameraUiState get cameraUi => _videoState.camera;
 
   @override
   bool get isPhotoMode => false;
@@ -32,7 +44,8 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen> {
   String get screenTitle => 'Video';
 
   @override
-  Key get cameraWidgetKey => ValueKey('video_${videoQuality.index}_${videoFps.fps}');
+  Key get cameraWidgetKey =>
+      ValueKey('video_${_videoState.videoQuality.index}_${_videoState.videoFps.fps}');
 
   @override
   SaveConfig buildSaveConfig() {
@@ -46,94 +59,55 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen> {
   VideoOptions buildVideoOptions() {
     return VideoOptions(
       enableAudio: true,
-      quality: videoQuality,
+      quality: _videoState.videoQuality,
       android: AndroidVideoOptions(
         bitrate: 6000000,
         fallbackStrategy: QualityFallbackStrategy.lower,
       ),
-      ios: CupertinoVideoOptions(fps: videoFps.fps),
+      ios: CupertinoVideoOptions(fps: _videoState.videoFps.fps),
     );
   }
 
   @override
-  void onDispose() {
-    _stopRecordTimer();
-    super.onDispose();
-  }
-
-  @override
   void onCameraReady(CameraState state) {
-    onCameraReadyBase(state);
-  }
-
-  void _startRecordTimer() {
-    _recordTimer?.cancel();
-    setState(() {
-      _isRecording = true;
-      _recordElapsed = Duration.zero;
-    });
-
-    _recordTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-
-      final Duration next = _recordElapsed + const Duration(milliseconds: 100);
-      if (next >= CameraCaptureButton.videoRecordMaxDuration) {
-        setState(
-          () => _recordElapsed = CameraCaptureButton.videoRecordMaxDuration,
-        );
-        timer.cancel();
-        return;
-      }
-
-      setState(() => _recordElapsed = next);
-    });
-  }
-
-  void _stopRecordTimer() {
-    _recordTimer?.cancel();
-    _recordTimer = null;
-    if (!mounted) return;
-    setState(() {
-      _isRecording = false;
-      _recordElapsed = Duration.zero;
-    });
+    _notifier.onCameraReady(state);
   }
 
   Future<void> pickVideoQuality() async {
     final VideoRecordingQuality? picked = await showCameraPickerSheet(
       context: context,
-      title: 'Video Resolution',
+      title: Strings.labelVideoResolution,
       options: kVideoQualities,
       labelBuilder: (option) => option.label,
-      selected: videoQuality,
+      selected: _videoState.videoQuality,
     );
 
-    if (picked != null && picked != videoQuality) {
-      setState(() {
-        videoQuality = picked;
-        resetCameraSession();
-      });
+    if (picked != null && picked != _videoState.videoQuality) {
+      _notifier.setVideoQuality(picked);
     }
   }
 
   Future<void> pickVideoFps() async {
     final VideoFpsOption? picked = await showCameraPickerSheet(
       context: context,
-      title: 'Frame Rate (FPS)',
+      title: Strings.labelFrameRate,
       options: kVideoFpsOptions,
       labelBuilder: (option) => option.label,
-      selected: videoFps,
+      selected: _videoState.videoFps,
     );
 
-    if (picked != null && picked.fps != videoFps.fps) {
-      setState(() {
-        videoFps = picked;
-        resetCameraSession();
-      });
+    if (picked != null && picked.fps != _videoState.videoFps.fps) {
+      _notifier.setVideoFps(picked);
     }
+  }
+
+  void _setProcessingMessage(String? message) {
+    if (_processingMessage == message) return;
+    setState(() => _processingMessage = message);
+  }
+
+  void _onVideoRecordStop() {
+    _setProcessingMessage(Strings.msgProcessingVideo);
   }
 
   @override
@@ -142,18 +116,20 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen> {
 
     switch ((event.status, event.isPicture, event.isVideo)) {
       case (MediaCaptureStatus.capturing, false, true):
-        _startRecordTimer();
+        _notifier.startRecordTimer(isMounted: () => mounted);
       case (MediaCaptureStatus.success, false, true):
-        _stopRecordTimer();
+        _setProcessingMessage(null);
+        _notifier.stopRecordTimer();
         final String? path = mediaPathFromCapture(event);
         if (path != null) {
           openMediaPreview(filePath: path, isVideo: true);
         }
       case (MediaCaptureStatus.failure, false, true):
-        _stopRecordTimer();
+        _setProcessingMessage(null);
+        _notifier.stopRecordTimer();
         messenger.showSnackBar(
           SnackBar(
-            content: Text('Recording failed: ${event.exception}'),
+            content: Text(sprintf(Strings.msgRecordingFailed, [event.exception])),
             backgroundColor: Colors.red.shade700,
           ),
         );
@@ -164,10 +140,13 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen> {
 
   @override
   Widget buildMiddleContent(CameraState state) {
+    final VideoRecordState video = _videoState;
+    final CameraUiState ui = cameraUi;
+
     return Column(
       children: [
         const Spacer(),
-        if (showFilterStrip) ...[
+        if (ui.showFilterStrip) ...[
           buildFilterStrip(state),
           const SizedBox(height: 8),
         ],
@@ -175,26 +154,22 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: CameraControlPanel(
             isPhotoMode: false,
-            flash: flash,
+            flash: ui.flash,
             timer: PhotoTimerOption.off,
             portraitEnabled: false,
-            exposure: exposure,
-            showExposureSlider: showExposureSlider,
-            showFilterStrip: showFilterStrip,
-            resolutionLabel: videoQuality.label,
-            fpsLabel: videoFps.label,
+            exposure: ui.exposure,
+            showExposureSlider: ui.showExposureSlider,
+            showFilterStrip: ui.showFilterStrip,
+            resolutionLabel: video.videoQuality.label,
+            fpsLabel: video.videoFps.label,
             onFlashTap: () {
-              setState(() => flash = flash.next);
-              applyFlash(state.sensorConfig);
+              _notifier.setFlash(ui.flash.next);
+              _notifier.applyFlash(state.sensorConfig);
             },
-            onToggleExposure: () {
-              setState(() => showExposureSlider = !showExposureSlider);
-            },
-            onToggleFilter: () {
-              setState(() => showFilterStrip = !showFilterStrip);
-            },
+            onToggleExposure: _notifier.toggleExposureSlider,
+            onToggleFilter: _notifier.toggleFilterStrip,
             onExposureChanged: (value) {
-              setState(() => exposure = value);
+              _notifier.setExposure(value);
               state.sensorConfig.setBrightness(value);
             },
             onTimerTap: () {},
@@ -210,17 +185,27 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen> {
 
   @override
   Widget? buildOverlay() {
-    if (!_isRecording) return null;
+    final bool isRecording = _videoState.isRecording;
+    final String? processingMessage = _processingMessage;
 
-    return Align(
-      alignment: Alignment.topCenter,
-      child: Padding(
-        padding: const EdgeInsets.only(top: 12),
-        child: VideoRecordElapsedTimer(
-          elapsed: _recordElapsed,
-          maxDuration: CameraCaptureButton.videoRecordMaxDuration,
-        ),
-      ),
+    if (!isRecording && processingMessage == null) return null;
+
+    return Stack(
+      children: [
+        if (processingMessage != null)
+          AppLoadingOverlay(message: processingMessage),
+        if (isRecording)
+          Align(
+            alignment: Alignment.topCenter,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: VideoRecordElapsedTimer(
+                elapsed: _videoState.recordElapsed,
+                maxDuration: CameraCaptureButton.videoRecordMaxDuration,
+              ),
+            ),
+          ),
+      ],
     );
   }
 
@@ -232,7 +217,7 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           buildZoomSelector(state),
-          const SizedBox(height: 16),
+          const Gap(16),
           buildCaptureRow(
             state,
             CameraCaptureButton(
@@ -241,6 +226,7 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen> {
               enabled: true,
               recordMaxDuration: CameraCaptureButton.videoRecordMaxDuration,
               onPhotoTap: () async {},
+              onVideoRecordStop: _onVideoRecordStop,
             ),
           ),
         ],

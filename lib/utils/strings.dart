@@ -1,0 +1,49 @@
+class Strings {
+  static String labelApp = 'Roketora Camera Demo';
+  static String labelDeleteVideoConfirm = 'Delete video?';
+  static String labelDeletePhotoConfirm = 'Delete photo?';
+  static String labelVideoPreview = 'Video Preview';
+  static String labelPhotoPreview = 'Photo Preview';
+  static String labelTakePhoto = 'Take Photo';
+  static String labelRecordVideo = 'Record Video';
+  static String labelGPSIsTurnedOff = 'GPS is turned off';
+  static String labelLocationPermissionRequired = 'Location permission required';
+  static String labelCameraPermissionRequired = 'Camera permission required';
+  static String labelMicrophonePermissionRequired = 'Microphone permission required';
+  static String labelPhotoResolution = 'Photo Resolution';
+  static String labelVideoResolution = 'Video Resolution';
+  static String labelFrameRate = 'Frame Rate (FPS)';
+  static String labelExposure = 'Exposure';
+  static String labelFilter = 'Filter';
+  static String labelPortrait = 'Portrait';
+  static String labelResolution = 'Resolution';
+  static String labelFps = 'FPS';
+  static String labelTimeRecord = '%s / %s';
+
+  static String labelActionCancel = 'Cancel';
+  static String labelActionDelete = 'Delete';
+  static String labelActionSave = 'Save';
+  static String labelActionOk = 'OK';
+  static String labelActionOpenSettings = 'Open Settings';
+
+  static String msgDeleteVideoConfirm = 'Do you want to delete this video?';
+  static String msgDeletePhotoConfirm = 'Do you want to delete this photo?';
+  static String msgLocationPermissionOrGPSIsNotReady = 'Location permission or GPS is not ready. Tap to check again.';
+  static String msgCapturing = 'Capturing...';
+  static String msgProcessingVideo = 'Processing video...';
+  static String msgDeleting = 'Deleting...';
+  static String msgGPSIsTurnedOff = 'Turn on location services to use this app.';
+  static String msgLocationPermissionRequired = 'Allow location access to continue.';
+  static String msgLocationAccessWasDenied = 'Location access was denied. Open Settings to allow it.';
+  static String msgAllowCameraAccessToContinue = 'Allow camera access to continue.';
+  static String msgCameraAccessWasDenied = 'Camera access was denied. Open Settings to allow it.';
+  static String msgAllowMicrophoneAccessToRecordVideoWithAudio = 'Allow microphone access to record video with audio.';
+  static String msgMicrophoneAccessWasDenied = 'Microphone access was denied. Open Settings to allow it.';
+  static String msgRecordingFailed = 'Recording failed: %s';
+  static String msgCaptureFailed = 'Capture failed: %s';
+  static String msgUnableToPlayVideo = 'Unable to play video: %s';
+  static String msgLoadingVideo = 'Loading video...';
+  static String msgDeleted = 'Deleted';
+  static String msgVideoSaved = 'Video saved';
+  static String msgPhotoSaved = 'Photo saved';
+}

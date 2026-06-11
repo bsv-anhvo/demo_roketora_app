@@ -1,24 +1,48 @@
+import 'package:demo_roketota_app/core/extensions/context_extension.dart';
 import 'package:demo_roketota_app/screens/take_photo_screen.dart';
 import 'package:demo_roketota_app/screens/video_record_screen.dart';
+import 'package:demo_roketota_app/utils/device_requirements.dart';
+import 'package:demo_roketota_app/utils/requirement_ui.dart';
+import 'package:demo_roketota_app/utils/strings.dart';
+import 'package:demo_roketota_app/widgets/other/app_action_button.dart';
 import 'package:flutter/material.dart';
+import 'package:gap/gap.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  bool _locationReady = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkLocationRequirements());
+  }
+
+  Future<void> _checkLocationRequirements() async {
+    final LocationRequirementStatus status =
+        await DeviceRequirements.ensureLocation();
+
+    if (!mounted) return;
+
+    setState(() => _locationReady = status == LocationRequirementStatus.ready);
+
+    if (status != LocationRequirementStatus.ready) {
+      await RequirementUi.showLocationIssue(context, status);
+    }
+  }
+
   void _openTakePhoto(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => const TakePhotoScreen(),
-      ),
-    );
+    context.push(const TakePhotoScreen());
   }
 
   void _openVideoRecord(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => const VideoRecordScreen(),
-      ),
-    );
+    context.push(const VideoRecordScreen());
   }
 
   @override
@@ -38,80 +62,72 @@ class HomeScreen extends StatelessWidget {
                 size: 72,
                 color: colorScheme.primary,
               ),
-              const SizedBox(height: 16),
+              const Gap(16),
               Text(
-                'Roketota Camera Demo',
+                Strings.labelApp,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
               ),
+              if (!_locationReady) ...[
+                const Gap(16),
+                Material(
+                  color: colorScheme.errorContainer,
+                  borderRadius: BorderRadius.circular(12),
+                  child: InkWell(
+                    onTap: _checkLocationRequirements,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.location_off_outlined,
+                            color: colorScheme.onErrorContainer,
+                          ),
+                          const Gap(12),
+                          Expanded(
+                            child: Text(
+                              Strings.msgLocationPermissionOrGPSIsNotReady,
+                              style: TextStyle(
+                                color: colorScheme.onErrorContainer,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
               const Spacer(),
-              _DemoActionButton(
-                icon: Icons.photo_camera_rounded,
-                label: 'Take Photo',
-                color: colorScheme.primary,
-                onPressed: () => _openTakePhoto(context),
-              ),
-              const SizedBox(height: 16),
-              _DemoActionButton(
-                icon: Icons.videocam_rounded,
-                label: 'Record Video',
-                color: colorScheme.secondary,
-                onPressed: () => _openVideoRecord(context),
+              Row(
+                children: [
+                  Expanded(
+                    child: AppActionButton(
+                      icon: Icons.photo_camera_rounded,
+                      label: Strings.labelTakePhoto,
+                      color: colorScheme.primary,
+                      onPressed: () => _openTakePhoto(context),
+                    ),
+                  ),
+                  const Gap(16),
+                  Expanded(
+                    child: AppActionButton(
+                      icon: Icons.videocam_rounded,
+                      label: Strings.labelRecordVideo,
+                      color: colorScheme.secondary,
+                      onPressed: () => _openVideoRecord(context),
+                    ),
+                  ),
+                ],
               ),
               const Spacer(),
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _DemoActionButton extends StatelessWidget {
-  const _DemoActionButton({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.onPressed,
-  });
-
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return FilledButton(
-      onPressed: onPressed,
-      style: FilledButton.styleFrom(
-        backgroundColor: color,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 32),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Icon(Icons.arrow_forward_ios_rounded, size: 18),
-        ],
       ),
     );
   }

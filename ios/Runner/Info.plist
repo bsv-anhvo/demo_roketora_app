@@ -5,9 +5,11 @@
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>Ứng dụng cần quyền camera để chụp ảnh và quay video demo.</string>
+	<string>This app needs camera permissions to take photos and record videos.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Ứng dụng cần quyền microphone để ghi âm khi quay video.</string>
+	<string>This app needs microphone permission to record audio while shooting video.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>This app needs location access to tag photos and videos with GPS coordinates.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

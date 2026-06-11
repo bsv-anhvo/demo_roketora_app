@@ -2,32 +2,32 @@ import 'dart:async';
 
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:camerawesome/pigeon.dart';
+import 'package:demo_roketota_app/core/extensions/context_extension.dart';
 import 'package:demo_roketota_app/models/camera_settings.dart';
+import 'package:demo_roketota_app/providers/camera/camera_ui_actions_mixin.dart';
+import 'package:demo_roketota_app/providers/camera/camera_ui_state.dart';
 import 'package:demo_roketota_app/screens/media_preview_screen.dart';
-import 'package:demo_roketota_app/utils/camera_zoom_helper.dart';
+import 'package:demo_roketota_app/utils/device_requirements.dart';
+import 'package:demo_roketota_app/utils/requirement_ui.dart';
+import 'package:demo_roketota_app/utils/strings.dart';
 import 'package:demo_roketota_app/widgets/camera/aspect_ratio_preview_overlay.dart';
 import 'package:demo_roketota_app/widgets/camera/camera_filter_strip.dart';
 import 'package:demo_roketota_app/widgets/camera/camera_settings_toggle_button.dart';
 import 'package:demo_roketota_app/widgets/camera/ios_style_zoom_selector.dart';
+import 'package:demo_roketota_app/widgets/other/app_top_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Base screen for camera experiences (photo / video).
-abstract class CameraScreenBase extends StatefulWidget {
+abstract class CameraScreenBase extends ConsumerStatefulWidget {
   const CameraScreenBase({super.key});
 }
 
-abstract class CameraScreenBaseState<T extends CameraScreenBase> extends State<T> {
-  FlashSetting flash = FlashSetting.off;
-  double exposure = 0.5;
-  bool showExposureSlider = false;
-  bool showFilterStrip = false;
-  bool showControlPanel = false;
-  bool isOpeningPreview = false;
-  ZoomRange zoomRange = CameraZoomHelper.fallbackRange;
-  double displayZoom = 1.0;
-  bool cameraReady = false;
-  bool zoomRangeLoaded = false;
+abstract class CameraScreenBaseState<T extends CameraScreenBase>
+    extends ConsumerState<T> {
+  CameraUiHost get cameraHost;
+  CameraUiState get cameraUi;
 
   bool get isPhotoMode;
   String get screenTitle;
@@ -38,11 +38,47 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase> extends State<T
   double? get portraitViewportHeightOverWidth => null;
   SaveConfig buildSaveConfig();
   VideoOptions buildVideoOptions();
+  bool get needsMicrophonePermission => true;
+
+  bool _permissionsReady = false;
+  bool _checkingPermissions = true;
 
   @override
   void initState() {
     super.initState();
     applyOrientations();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _verifyRequirements());
+  }
+
+  Future<void> _verifyRequirements() async {
+    final CameraRequirementStatus cameraStatus =
+        await DeviceRequirements.ensureCamera(
+      needsMicrophone: needsMicrophonePermission,
+    );
+
+    if (!mounted) return;
+
+    if (cameraStatus != CameraRequirementStatus.ready) {
+      await RequirementUi.showCameraIssue(context, cameraStatus);
+      if (mounted) context.pop();
+      return;
+    }
+
+    final LocationRequirementStatus locationStatus =
+        await DeviceRequirements.ensureLocation();
+
+    if (!mounted) return;
+
+    if (locationStatus != LocationRequirementStatus.ready) {
+      await RequirementUi.showLocationIssue(context, locationStatus);
+      if (mounted) context.pop();
+      return;
+    }
+
+    setState(() {
+      _checkingPermissions = false;
+      _permissionsReady = true;
+    });
   }
 
   @override
@@ -65,72 +101,6 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase> extends State<T
     SystemChrome.setPreferredOrientations(kCameraOrientations);
   }
 
-  void toggleControlPanel() {
-    setState(() {
-      showControlPanel = !showControlPanel;
-      if (!showControlPanel) {
-        showExposureSlider = false;
-        showFilterStrip = false;
-      }
-    });
-  }
-
-  Widget buildMiddleContentWrapper(CameraState state) {
-    if (!showControlPanel) {
-      return const Column(children: [Spacer()]);
-    }
-    return buildMiddleContent(state);
-  }
-
-  FlashMode get flashMode => switch (flash) {
-        FlashSetting.off => FlashMode.none,
-        FlashSetting.on => FlashMode.on,
-        FlashSetting.auto => FlashMode.auto,
-      };
-
-  Future<void> refreshZoomRange(CameraState state) async {
-    final ZoomRange range = await CameraZoomHelper.load();
-    if (!mounted) return;
-
-    final double initialZoom = CameraZoomHelper.defaultDisplayZoom(range);
-
-    setState(() {
-      zoomRange = range;
-      displayZoom = initialZoom;
-    });
-
-    await applyZoom(state.sensorConfig, initialZoom);
-  }
-
-  Future<void> applyFlash(SensorConfig sensorConfig) async {
-    await sensorConfig.setFlashMode(flashMode);
-  }
-
-  Future<void> applyZoom(SensorConfig sensorConfig, double zoom) async {
-    final double clamped = zoomRange.clampDisplayZoom(zoom);
-    final double normalized = zoomRange.toNormalized(clamped);
-    await sensorConfig.setZoom(normalized);
-    if (mounted) setState(() => displayZoom = clamped);
-  }
-
-  void onCameraReadyBase(CameraState state) {
-    if (!zoomRangeLoaded) {
-      zoomRangeLoaded = true;
-      unawaited(refreshZoomRange(state));
-    }
-
-    if (cameraReady) return;
-    cameraReady = true;
-    state.sensorConfig.setBrightness(exposure);
-  }
-
-  void resetCameraSession() {
-    setState(() {
-      cameraReady = false;
-      zoomRangeLoaded = false;
-    });
-  }
-
   String? mediaPathFromCapture(MediaCapture event) {
     return event.captureRequest.when(
       single: (single) => single.file?.path,
@@ -147,34 +117,31 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase> extends State<T
     required String filePath,
     required bool isVideo,
   }) async {
-    if (isOpeningPreview || !mounted) return;
-    isOpeningPreview = true;
+    if (cameraUi.isOpeningPreview || !mounted) return;
+    cameraHost.setOpeningPreview(true);
 
-    final bool? saved = await Navigator.of(context).push<bool>(
-      MaterialPageRoute<bool>(
-        fullscreenDialog: true,
-        builder: (_) => MediaPreviewScreen(
-          filePath: filePath,
-          isVideo: isVideo,
-        ),
+    final bool? saved = await context.pushFullscreen<bool>(
+      MediaPreviewScreen(
+        filePath: filePath,
+        isVideo: isVideo,
       ),
     );
 
-    isOpeningPreview = false;
+    cameraHost.setOpeningPreview(false);
     if (!mounted) return;
 
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
     if (saved == true) {
       messenger.showSnackBar(
         SnackBar(
-          content: Text(isVideo ? 'Video saved' : 'Photo saved'),
+          content: Text(isVideo ? Strings.msgVideoSaved : Strings.msgPhotoSaved),
           duration: const Duration(seconds: 2),
         ),
       );
     } else if (saved == false) {
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Deleted'),
+        SnackBar(
+          content: Text(Strings.msgDeleted),
           duration: Duration(seconds: 2),
         ),
       );
@@ -188,33 +155,25 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase> extends State<T
   Widget? buildOverlay() => null;
 
   Widget buildTopBar() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(Icons.arrow_back_ios_new_rounded),
-            color: Colors.white,
-          ),
-          Expanded(
-            child: Text(
-              screenTitle,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          CameraSettingsToggleButton(
-            isActive: showControlPanel,
-            onTap: toggleControlPanel,
-          ),
-        ],
+    return AppTopBar(
+      title: screenTitle,
+      leading: IconButton(
+        onPressed: () => context.pop(),
+        icon: const Icon(Icons.arrow_back_ios_new_rounded),
+        color: Colors.white,
+      ),
+      trailing: CameraSettingsToggleButton(
+        isActive: cameraUi.showControlPanel,
+        onTap: cameraHost.toggleControlPanel,
       ),
     );
+  }
+
+  Widget buildMiddleContentWrapper(CameraState state) {
+    if (!cameraUi.showControlPanel) {
+      return const Column(children: [Spacer()]);
+    }
+    return buildMiddleContent(state);
   }
 
   Widget buildFilterStrip(CameraState state) {
@@ -229,15 +188,15 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase> extends State<T
 
   Widget buildZoomSelector(CameraState state) {
     return IosStyleZoomSelector(
-      range: zoomRange,
-      displayZoom: displayZoom,
-      onZoomSelected: (zoom) => applyZoom(state.sensorConfig, zoom),
+      range: cameraUi.zoomRange,
+      displayZoom: cameraUi.displayZoom,
+      onZoomSelected: (zoom) => cameraHost.applyZoom(state.sensorConfig, zoom),
     );
   }
 
   Widget buildCameraSwitchButton(CameraState state) {
     return IconButton(
-      onPressed: () => state.switchCameraSensor(flash: flashMode),
+      onPressed: () => state.switchCameraSensor(flash: cameraHost.flashMode),
       icon: const Icon(Icons.cameraswitch_outlined),
       color: Colors.white,
       iconSize: 32,
@@ -264,6 +223,12 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase> extends State<T
     );
   }
 
+  Widget _buildPermissionGate() {
+    return const Center(
+      child: CircularProgressIndicator(color: Colors.white),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -274,7 +239,9 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase> extends State<T
           children: [
             buildTopBar(),
             Expanded(
-              child: Stack(
+              child: _checkingPermissions || !_permissionsReady
+                  ? _buildPermissionGate()
+                  : Stack(
                 children: [
                   KeyedSubtree(
                     key: cameraWidgetKey,
@@ -282,7 +249,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase> extends State<T
                       saveConfig: buildSaveConfig(),
                       sensorConfig: SensorConfig.single(
                         sensor: Sensor.position(SensorPosition.back),
-                        flashMode: flashMode,
+                        flashMode: cameraHost.flashMode,
                         aspectRatio: initialAspectRatio,
                       ),
                       enablePhysicalButton: true,
@@ -301,11 +268,15 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase> extends State<T
                       availableFilters: awesomePresetFiltersList,
                       onPreviewScaleBuilder: (state) => OnPreviewScale(
                         onScale: (normalized) {
-                          final double display = zoomRange.clampDisplayZoom(
-                            zoomRange.toDisplay(normalized),
+                          final double display = cameraUi.zoomRange
+                              .clampDisplayZoom(
+                            cameraUi.zoomRange.toDisplay(normalized),
                           );
-                          setState(() => displayZoom = display);
                           state.sensorConfig.setZoom(normalized);
+                          Future.microtask(() {
+                            if (!mounted) return;
+                            cameraHost.setDisplayZoom(display);
+                          });
                         },
                       ),
                       onMediaCaptureEvent: (event) =>
@@ -332,3 +303,4 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase> extends State<T
     );
   }
 }
+

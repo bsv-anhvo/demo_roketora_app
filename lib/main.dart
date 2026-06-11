@@ -1,17 +1,23 @@
 import 'package:demo_roketota_app/screens/home_screen.dart';
+import 'package:demo_roketota_app/utils/strings.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 void main() {
-  runApp(const DemoRoketotaApp());
+  runApp(
+    const ProviderScope(
+      child: DemoRoketoraApp(),
+    ),
+  );
 }
 
-class DemoRoketotaApp extends StatelessWidget {
-  const DemoRoketotaApp({super.key});
+class DemoRoketoraApp extends StatelessWidget {
+  const DemoRoketoraApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Demo Roketota App',
+      title: Strings.labelApp,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(

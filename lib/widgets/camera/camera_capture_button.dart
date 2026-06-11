@@ -12,6 +12,7 @@ class CameraCaptureButton extends StatefulWidget {
     required this.onPhotoTap,
     this.onQuickVideoStart,
     this.onQuickVideoStop,
+    this.onVideoRecordStop,
     this.recordMaxDuration,
     this.enabled = true,
   });
@@ -24,6 +25,7 @@ class CameraCaptureButton extends StatefulWidget {
   final Future<void> Function() onPhotoTap;
   final VoidCallback? onQuickVideoStart;
   final VoidCallback? onQuickVideoStop;
+  final VoidCallback? onVideoRecordStop;
 
   /// When set in video mode, draws a countdown ring and auto-stops recording.
   final Duration? recordMaxDuration;
@@ -154,6 +156,7 @@ class _CameraCaptureButtonState extends State<CameraCaptureButton>
       },
       onVideoRecordingMode: (recordingState) {
         _resetRecordProgress();
+        widget.onVideoRecordStop?.call();
         recordingState.stopRecording();
       },
     );
@@ -211,7 +214,10 @@ class _CameraCaptureButtonState extends State<CameraCaptureButton>
     _resetRecordProgress();
     HapticFeedback.mediumImpact();
     widget.state.when(
-      onVideoRecordingMode: (recordingState) => recordingState.stopRecording(),
+      onVideoRecordingMode: (recordingState) {
+        widget.onVideoRecordStop?.call();
+        recordingState.stopRecording();
+      },
       onPhotoMode: (_) {},
       onVideoMode: (_) {},
       onPreviewMode: (_) {},

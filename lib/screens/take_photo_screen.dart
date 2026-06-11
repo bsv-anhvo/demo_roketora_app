@@ -1,31 +1,42 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:camerawesome/pigeon.dart';
-import 'package:demo_roketota_app/models/camera_settings.dart';
 import 'package:demo_roketota_app/bases/base_camera_screen.dart';
+import 'package:demo_roketota_app/models/camera_settings.dart';
+import 'package:demo_roketota_app/providers/camera/camera_ui_actions_mixin.dart';
+import 'package:demo_roketota_app/providers/camera/camera_ui_state.dart';
+import 'package:demo_roketota_app/providers/camera/take_photo_notifier.dart';
+import 'package:demo_roketota_app/providers/camera/take_photo_state.dart';
 import 'package:demo_roketota_app/utils/media_path_builder.dart';
+import 'package:demo_roketota_app/utils/strings.dart';
+import 'package:demo_roketota_app/widgets/other/app_loading_overlay.dart';
 import 'package:demo_roketota_app/widgets/camera/camera_capture_button.dart';
 import 'package:demo_roketota_app/widgets/camera/camera_control_panel.dart';
 import 'package:flutter/material.dart';
+import 'package:gap/gap.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sprintf/sprintf.dart';
 
 class TakePhotoScreen extends CameraScreenBase {
   const TakePhotoScreen({super.key});
 
   @override
-  State<TakePhotoScreen> createState() => _TakePhotoScreenState();
+  ConsumerState<TakePhotoScreen> createState() => _TakePhotoScreenState();
 }
 
 class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
-  PhotoTimerOption timer = PhotoTimerOption.off;
-  bool portraitEnabled = false;
-  PhotoAspectRatioOption selectedPhotoAspectRatio = kPhotoAspectRatios.first;
+  String? _processingMessage;
 
-  int? countdown;
-  Timer? countdownTimer;
-  bool pendingQuickVideoStart = false;
-  bool isCapturing = false;
+  TakePhotoNotifier get _notifier => ref.read(takePhotoProvider.notifier);
+
+  TakePhotoState get _photoState => ref.watch(takePhotoProvider);
+
+  @override
+  CameraUiHost get cameraHost => _notifier;
+
+  @override
+  CameraUiState get cameraUi => _photoState.camera;
 
   @override
   bool get isPhotoMode => true;
@@ -38,7 +49,7 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
 
   @override
   CameraAspectRatios get initialAspectRatio =>
-      selectedPhotoAspectRatio.aspectRatio;
+      _photoState.selectedPhotoAspectRatio.aspectRatio;
 
   @override
   CameraPreviewFit get previewFit => CameraPreviewFit.contain;
@@ -46,19 +57,14 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
   @override
   Alignment get previewAlignment => Alignment.topCenter;
 
-  /// CameraX on Android has no 1:1 preview — mask only that case.
   @override
   double? get portraitViewportHeightOverWidth {
     if (!Platform.isAndroid) return null;
-    if (selectedPhotoAspectRatio.aspectRatio != CameraAspectRatios.ratio_1_1) {
+    if (_photoState.selectedPhotoAspectRatio.aspectRatio !=
+        CameraAspectRatios.ratio_1_1) {
       return null;
     }
     return 1;
-  }
-
-  @override
-  void onDispose() {
-    countdownTimer?.cancel();
   }
 
   @override
@@ -86,98 +92,35 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
 
   @override
   void onCameraReady(CameraState state) {
-    if (pendingQuickVideoStart && state is VideoCameraState) {
-      pendingQuickVideoStart = false;
-      state.startRecording();
-    }
-
-    onCameraReadyBase(state);
-  }
-
-  Future<void> applyPhotoAspectRatio(SensorConfig sensorConfig) async {
-    if (sensorConfig.aspectRatio == selectedPhotoAspectRatio.aspectRatio) {
-      return;
-    }
-    await sensorConfig.setAspectRatio(selectedPhotoAspectRatio.aspectRatio);
-  }
-
-  Future<void> applyPortraitMode(CameraState state) async {
-    if (!portraitEnabled) return;
-
-    final SensorDeviceData sensors = await state.getSensors();
-    final bool isFront =
-        state.sensorConfig.sensors.first.position == SensorPosition.front;
-
-    if (isFront && sensors.trueDepth != null) {
-      state.setSensorType(0, SensorType.trueDepth, sensors.trueDepth!.uid);
-      return;
-    }
-
-    if (!isFront && sensors.telephoto != null) {
-      state.setSensorType(0, SensorType.telephoto, sensors.telephoto!.uid);
-    }
-  }
-
-  Future<void> resetPortraitLens(CameraState state) async {
-    if (portraitEnabled) return;
-
-    final SensorDeviceData sensors = await state.getSensors();
-    final bool isFront =
-        state.sensorConfig.sensors.first.position == SensorPosition.front;
-
-    if (isFront) return;
-
-    if (sensors.wideAngle != null) {
-      state.setSensorType(0, SensorType.wideAngle, sensors.wideAngle!.uid);
-    }
+    _notifier.onCameraReady(state);
   }
 
   Future<void> handlePhotoCapture(PhotoCameraState photoState) async {
-    if (isCapturing || countdown != null) return;
+    final TakePhotoState photo = _photoState;
+    if (photo.isCapturing || photo.countdown != null) return;
 
-    final int delay = timer.seconds;
+    final int delay = photo.timer.seconds;
     if (delay == 0) {
-      await takePhoto(photoState);
+      await _notifier.takePhoto(photoState);
       return;
     }
 
-    setState(() => countdown = delay);
-    countdownTimer?.cancel();
-    countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-
-      if (countdown == null || countdown! <= 1) {
-        timer.cancel();
-        setState(() => countdown = null);
-        takePhoto(photoState);
-        return;
-      }
-
-      setState(() => countdown = countdown! - 1);
-    });
-  }
-
-  Future<void> takePhoto(PhotoCameraState photoState) async {
-    setState(() => isCapturing = true);
-    try {
-      await photoState.takePhoto();
-    } finally {
-      if (mounted) setState(() => isCapturing = false);
-    }
+    _notifier.startCountdown(
+      delay: delay,
+      isMounted: () => mounted,
+      onComplete: () => _notifier.takePhoto(photoState),
+    );
   }
 
   void handleQuickVideoStart(CameraState state) {
     state.when(
       onPhotoMode: (photoState) {
-        pendingQuickVideoStart = true;
+        _notifier.setPendingQuickVideoStart(true);
         photoState.setState(CaptureMode.video);
       },
       onVideoMode: (videoState) {
-        if (pendingQuickVideoStart) {
-          pendingQuickVideoStart = false;
+        if (_photoState.pendingQuickVideoStart) {
+          _notifier.setPendingQuickVideoStart(false);
           videoState.startRecording();
         }
       },
@@ -187,27 +130,33 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
   void handleQuickVideoStop(CameraState state) {
     state.when(
       onVideoRecordingMode: (recordingState) {
-        pendingQuickVideoStart = false;
+        _notifier.setPendingQuickVideoStart(false);
+        _setProcessingMessage(Strings.msgProcessingVideo);
         recordingState.stopRecording();
       },
       onVideoMode: (_) {
-        pendingQuickVideoStart = false;
+        _notifier.setPendingQuickVideoStart(false);
       },
     );
+  }
+
+  void _setProcessingMessage(String? message) {
+    if (_processingMessage == message) return;
+    setState(() => _processingMessage = message);
   }
 
   Future<void> pickPhotoAspectRatio(CameraState state) async {
     final PhotoAspectRatioOption? picked = await showCameraPickerSheet(
       context: context,
-      title: 'Photo Resolution',
+      title: Strings.labelPhotoResolution,
       options: kPhotoAspectRatios,
       labelBuilder: (option) => option.label,
-      selected: selectedPhotoAspectRatio,
+      selected: _photoState.selectedPhotoAspectRatio,
     );
 
-    if (picked != null && picked != selectedPhotoAspectRatio) {
-      setState(() => selectedPhotoAspectRatio = picked);
-      await applyPhotoAspectRatio(state.sensorConfig);
+    if (picked != null && picked != _photoState.selectedPhotoAspectRatio) {
+      _notifier.setSelectedAspectRatio(picked);
+      await _notifier.applyPhotoAspectRatio(state.sensorConfig);
     }
   }
 
@@ -217,34 +166,32 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
 
     switch ((event.status, event.isPicture, event.isVideo)) {
       case (MediaCaptureStatus.capturing, true, false):
-        messenger.showSnackBar(
-          const SnackBar(content: Text('Capturing...')),
-        );
+        _setProcessingMessage(Strings.msgCapturing);
       case (MediaCaptureStatus.success, true, false):
+        _setProcessingMessage(null);
         final String? path = mediaPathFromCapture(event);
         if (path != null) {
           openMediaPreview(filePath: path, isVideo: false);
         }
       case (MediaCaptureStatus.failure, true, false):
+        _setProcessingMessage(null);
         messenger.showSnackBar(
           SnackBar(
-            content: Text('Capture failed: ${event.exception}'),
+            content: Text(sprintf(Strings.msgCaptureFailed, [event.exception])),
             backgroundColor: Colors.red.shade700,
           ),
         );
-      case (MediaCaptureStatus.capturing, false, true):
-        messenger.showSnackBar(
-          const SnackBar(content: Text('Recording...')),
-        );
       case (MediaCaptureStatus.success, false, true):
+        _setProcessingMessage(null);
         final String? path = mediaPathFromCapture(event);
         if (path != null) {
           openMediaPreview(filePath: path, isVideo: true);
         }
       case (MediaCaptureStatus.failure, false, true):
+        _setProcessingMessage(null);
         messenger.showSnackBar(
           SnackBar(
-            content: Text('Recording failed: ${event.exception}'),
+            content: Text(sprintf(Strings.msgRecordingFailed, [event.exception])),
             backgroundColor: Colors.red.shade700,
           ),
         );
@@ -255,10 +202,13 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
 
   @override
   Widget buildMiddleContent(CameraState state) {
+    final TakePhotoState photo = _photoState;
+    final CameraUiState ui = cameraUi;
+
     return Column(
       children: [
         const Spacer(),
-        if (showFilterStrip) ...[
+        if (ui.showFilterStrip) ...[
           buildFilterStrip(state),
           const SizedBox(height: 8),
         ],
@@ -266,34 +216,30 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: CameraControlPanel(
             isPhotoMode: true,
-            flash: flash,
-            timer: timer,
-            portraitEnabled: portraitEnabled,
-            exposure: exposure,
-            showExposureSlider: showExposureSlider,
-            showFilterStrip: showFilterStrip,
-            resolutionLabel: selectedPhotoAspectRatio.label,
+            flash: ui.flash,
+            timer: photo.timer,
+            portraitEnabled: photo.portraitEnabled,
+            exposure: ui.exposure,
+            showExposureSlider: ui.showExposureSlider,
+            showFilterStrip: ui.showFilterStrip,
+            resolutionLabel: photo.selectedPhotoAspectRatio.label,
             onFlashTap: () {
-              setState(() => flash = flash.next);
-              applyFlash(state.sensorConfig);
+              _notifier.setFlash(ui.flash.next);
+              _notifier.applyFlash(state.sensorConfig);
             },
-            onToggleExposure: () {
-              setState(() => showExposureSlider = !showExposureSlider);
-            },
-            onToggleFilter: () {
-              setState(() => showFilterStrip = !showFilterStrip);
-            },
+            onToggleExposure: _notifier.toggleExposureSlider,
+            onToggleFilter: _notifier.toggleFilterStrip,
             onExposureChanged: (value) {
-              setState(() => exposure = value);
+              _notifier.setExposure(value);
               state.sensorConfig.setBrightness(value);
             },
-            onTimerTap: () => setState(() => timer = timer.next),
+            onTimerTap: () => _notifier.setTimer(photo.timer.next),
             onPortraitTap: () async {
-              setState(() => portraitEnabled = !portraitEnabled);
-              if (portraitEnabled) {
-                await applyPortraitMode(state);
+              _notifier.setPortraitEnabled(!photo.portraitEnabled);
+              if (_photoState.portraitEnabled) {
+                await _notifier.applyPortraitMode(state);
               } else {
-                await resetPortraitLens(state);
+                await _notifier.resetPortraitLens(state);
               }
             },
             onResolutionTap: () => pickPhotoAspectRatio(state),
@@ -306,19 +252,21 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
 
   @override
   Widget buildBottomBar(CameraState state) {
+    final TakePhotoState photo = _photoState;
+
     return Padding(
       padding: const EdgeInsets.only(top: 8, bottom: 12),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           buildZoomSelector(state),
-          const SizedBox(height: 16),
+          const Gap(16),
           buildCaptureRow(
             state,
             CameraCaptureButton(
               state: state,
               isPhotoMode: true,
-              enabled: !isCapturing && countdown == null,
+              enabled: !photo.isCapturing && photo.countdown == null,
               onPhotoTap: () async {
                 await state.when(onPhotoMode: handlePhotoCapture);
               },
@@ -333,19 +281,29 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
 
   @override
   Widget? buildOverlay() {
-    if (countdown == null) return null;
+    final int? countdown = _photoState.countdown;
+    final String? processingMessage = _processingMessage;
 
-    return Container(
-      color: Colors.black38,
-      alignment: Alignment.center,
-      child: Text(
-        '$countdown',
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 96,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
+    if (countdown == null && processingMessage == null) return null;
+
+    return Stack(
+      children: [
+        if (processingMessage != null)
+          AppLoadingOverlay(message: processingMessage),
+        if (countdown != null)
+          Container(
+            color: Colors.black38,
+            alignment: Alignment.center,
+            child: Text(
+              '$countdown',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 96,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

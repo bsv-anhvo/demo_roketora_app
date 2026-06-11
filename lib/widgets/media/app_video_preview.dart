@@ -1,6 +1,8 @@
 import 'dart:io';
 
+import 'package:demo_roketota_app/utils/strings.dart';
 import 'package:flutter/material.dart';
+import 'package:sprintf/sprintf.dart';
 import 'package:video_player/video_player.dart';
 
 class AppVideoPreview extends StatefulWidget {
@@ -42,7 +44,7 @@ class _AppVideoPreviewState extends State<AppVideoPreview> {
     } catch (error) {
       await controller.dispose();
       if (!mounted) return;
-      setState(() => _errorMessage = 'Unable to play video: $error');
+      setState(() => _errorMessage = sprintf(Strings.msgUnableToPlayVideo, [error]));
     }
   }
 
@@ -78,14 +80,14 @@ class _AppVideoPreviewState extends State<AppVideoPreview> {
     }
 
     if (controller == null || !controller.value.isInitialized) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             CircularProgressIndicator(color: Colors.white),
             SizedBox(height: 12),
             Text(
-              'Loading video...',
+              Strings.msgLoadingVideo,
               style: TextStyle(color: Colors.white70),
             ),
           ],
