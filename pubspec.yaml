@@ -42,6 +42,9 @@ dependencies:
   geolocator: ^14.0.2
   permission_handler: ^12.0.3
   sprintf: ^7.0.0
+  image: ^4.5.4
+  flutter_image_compress: ^2.4.0
+  google_mlkit_selfie_segmentation: ^0.10.0
 
 dev_dependencies:
   flutter_test:
