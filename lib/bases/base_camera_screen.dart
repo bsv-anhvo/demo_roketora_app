@@ -26,7 +26,7 @@ abstract class CameraScreenBase extends ConsumerStatefulWidget {
 }
 
 abstract class CameraScreenBaseState<T extends CameraScreenBase>
-    extends ConsumerState<T> {
+    extends ConsumerState<T> with WidgetsBindingObserver {
   CameraUiHost get cameraHost;
   CameraUiState get cameraUi;
 
@@ -43,10 +43,14 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
 
   bool _permissionsReady = false;
   bool _checkingPermissions = true;
+  bool _cameraRunning = false;
+  bool _pausedForLifecycle = false;
+  int _cameraSession = 0;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     applyOrientations();
     WidgetsBinding.instance.addPostFrameCallback((_) => _verifyRequirements());
   }
@@ -79,6 +83,45 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
     setState(() {
       _checkingPermissions = false;
       _permissionsReady = true;
+      _cameraRunning = true;
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.hidden:
+        if (_cameraRunning) {
+          _stopCamera(pausedForLifecycle: true);
+        }
+      case AppLifecycleState.resumed:
+        if (_pausedForLifecycle &&
+            _permissionsReady &&
+            !cameraUi.isOpeningPreview) {
+          _pausedForLifecycle = false;
+          _startCamera();
+        }
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.detached:
+        break;
+    }
+  }
+
+  void _stopCamera({bool pausedForLifecycle = false}) {
+    if (!_cameraRunning) return;
+    if (pausedForLifecycle) {
+      _pausedForLifecycle = true;
+    }
+    cameraHost.resetCameraSession();
+    setState(() => _cameraRunning = false);
+  }
+
+  void _startCamera() {
+    if (_cameraRunning || !_permissionsReady) return;
+    setState(() {
+      _cameraSession++;
+      _cameraRunning = true;
     });
   }
 
@@ -90,6 +133,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     onDispose();
     super.dispose();
@@ -119,6 +163,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
     required bool isVideo,
   }) async {
     if (cameraUi.isOpeningPreview || !mounted) return;
+    _stopCamera();
     cameraHost.setOpeningPreview(true);
 
     final bool? saved = await context.pushFullscreen<bool>(
@@ -129,6 +174,10 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
 
     cameraHost.setOpeningPreview(false);
     if (!mounted) return;
+
+    if (!_pausedForLifecycle) {
+      _startCamera();
+    }
 
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
     if (saved == true) {
@@ -243,56 +292,60 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
                   ? _buildPermissionGate()
                   : Stack(
                 children: [
-                  KeyedSubtree(
-                    key: cameraWidgetKey,
-                    child: CameraAwesomeBuilder.awesome(
-                      saveConfig: buildSaveConfig(),
-                      sensorConfig: SensorConfig.single(
-                        sensor: Sensor.position(SensorPosition.back),
-                        flashMode: cameraHost.flashMode,
-                        aspectRatio: initialAspectRatio,
-                      ),
-                      enablePhysicalButton: true,
-                      previewFit: previewFit,
-                      previewAlignment: previewAlignment,
-                      previewDecoratorBuilder:
-                          portraitViewportHeightOverWidth == null
-                              ? null
-                              : (state, preview) => AspectRatioPreviewOverlay(
-                                    heightOverWidth:
-                                        portraitViewportHeightOverWidth!,
-                                  ),
-                      theme: AwesomeTheme(
-                        bottomActionsBackgroundColor: Colors.transparent,
-                      ),
-                      availableFilters: awesomePresetFiltersList,
-                      onPreviewScaleBuilder: (state) => OnPreviewScale(
-                        onScale: (normalized) {
-                          final double display = cameraUi.zoomRange
-                              .clampDisplayZoom(
-                            cameraUi.zoomRange.toDisplay(normalized),
+                  if (_cameraRunning)
+                    KeyedSubtree(
+                      key: ValueKey('${cameraWidgetKey}_$_cameraSession'),
+                      child: CameraAwesomeBuilder.awesome(
+                        saveConfig: buildSaveConfig(),
+                        sensorConfig: SensorConfig.single(
+                          sensor: Sensor.position(SensorPosition.back),
+                          flashMode: cameraHost.flashMode,
+                          aspectRatio: initialAspectRatio,
+                        ),
+                        enablePhysicalButton: true,
+                        previewFit: previewFit,
+                        previewAlignment: previewAlignment,
+                        previewDecoratorBuilder:
+                            portraitViewportHeightOverWidth == null
+                                ? null
+                                : (state, preview) =>
+                                    AspectRatioPreviewOverlay(
+                                      heightOverWidth:
+                                          portraitViewportHeightOverWidth!,
+                                    ),
+                        theme: AwesomeTheme(
+                          bottomActionsBackgroundColor: Colors.transparent,
+                        ),
+                        availableFilters: awesomePresetFiltersList,
+                        onPreviewScaleBuilder: (state) => OnPreviewScale(
+                          onScale: (normalized) {
+                            final double display = cameraUi.zoomRange
+                                .clampDisplayZoom(
+                              cameraUi.zoomRange.toDisplay(normalized),
+                            );
+                            state.sensorConfig.setZoom(normalized);
+                            Future.microtask(() {
+                              if (!mounted) return;
+                              cameraHost.setDisplayZoom(display);
+                            });
+                          },
+                        ),
+                        onMediaCaptureEvent: (event) =>
+                            handleCaptureEvent(context, event),
+                        topActionsBuilder: (state) {
+                          state.when(
+                            onPhotoMode: onCameraReady,
+                            onVideoMode: onCameraReady,
+                            onVideoRecordingMode: onCameraReady,
                           );
-                          state.sensorConfig.setZoom(normalized);
-                          Future.microtask(() {
-                            if (!mounted) return;
-                            cameraHost.setDisplayZoom(display);
-                          });
+                          return const SizedBox.shrink();
                         },
+                        middleContentBuilder: buildMiddleContentWrapper,
+                        bottomActionsBuilder: buildBottomBar,
                       ),
-                      onMediaCaptureEvent: (event) =>
-                          handleCaptureEvent(context, event),
-                      topActionsBuilder: (state) {
-                        state.when(
-                          onPhotoMode: onCameraReady,
-                          onVideoMode: onCameraReady,
-                          onVideoRecordingMode: onCameraReady,
-                        );
-                        return const SizedBox.shrink();
-                      },
-                      middleContentBuilder: buildMiddleContentWrapper,
-                      bottomActionsBuilder: buildBottomBar,
-                    ),
-                  ),
+                    )
+                  else
+                    const ColoredBox(color: Colors.black),
                   if (buildOverlay() != null) buildOverlay()!,
                 ],
               ),

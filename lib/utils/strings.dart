@@ -25,6 +25,7 @@ class Strings {
   static String labelActionSave = 'Save';
   static String labelActionOk = 'OK';
   static String labelActionOpenSettings = 'Open Settings';
+  static String labelEditPhoto = 'Edit photo';
 
   static String msgDeleteVideoConfirm = 'Do you want to delete this video?';
   static String msgDeletePhotoConfirm = 'Do you want to delete this photo?';

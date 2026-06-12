@@ -8,6 +8,7 @@ class AppTopBar extends StatelessWidget {
     this.trailing,
     this.titleStyle,
     this.padding = const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    this.sideSlotWidth = 48,
   });
 
   final String title;
@@ -15,8 +16,7 @@ class AppTopBar extends StatelessWidget {
   final Widget? trailing;
   final TextStyle? titleStyle;
   final EdgeInsetsGeometry padding;
-
-  static const double _sideSlotWidth = 48;
+  final double sideSlotWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -32,10 +32,13 @@ class AppTopBar extends StatelessWidget {
       padding: padding,
       child: Row(
         children: [
-          if (leading != null)
-            leading!
-          else
-            const SizedBox(width: _sideSlotWidth),
+          SizedBox(
+            width: sideSlotWidth,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: leading,
+            ),
+          ),
           Expanded(
             child: Text(
               title,
@@ -44,10 +47,11 @@ class AppTopBar extends StatelessWidget {
             ),
           ),
           SizedBox(
-            width: _sideSlotWidth,
-            child: trailing == null
-                ? null
-                : Align(alignment: Alignment.centerRight, child: trailing),
+            width: sideSlotWidth,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: trailing,
+            ),
           ),
         ],
       ),
