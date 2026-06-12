@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:demo_roketota_app/utils/strings.dart';
+import 'package:demo_roketota_app/widgets/media/video_transport_controls.dart';
 import 'package:flutter/material.dart';
 import 'package:sprintf/sprintf.dart';
 import 'package:video_player/video_player.dart';
@@ -9,9 +10,11 @@ class AppVideoPreview extends StatefulWidget {
   const AppVideoPreview({
     super.key,
     required this.videoPath,
+    this.skipInterval = const Duration(seconds: 10),
   });
 
   final String videoPath;
+  final Duration skipInterval;
 
   @override
   State<AppVideoPreview> createState() => _AppVideoPreviewState();
@@ -34,9 +37,11 @@ class _AppVideoPreviewState extends State<AppVideoPreview> {
 
     try {
       await controller.initialize();
-      await controller.setLooping(true);
+      await controller.setLooping(false);
+      controller.addListener(_onControllerUpdate);
       await controller.play();
       if (!mounted) {
+        controller.removeListener(_onControllerUpdate);
         await controller.dispose();
         return;
       }
@@ -44,14 +49,43 @@ class _AppVideoPreviewState extends State<AppVideoPreview> {
     } catch (error) {
       await controller.dispose();
       if (!mounted) return;
-      setState(() => _errorMessage = sprintf(Strings.msgUnableToPlayVideo, [error]));
+      setState(
+        () => _errorMessage = sprintf(Strings.msgUnableToPlayVideo, [error]),
+      );
     }
   }
 
-  @override
-  void dispose() {
-    _controller?.dispose();
-    super.dispose();
+  void _onControllerUpdate() {
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  void _togglePlayPause() {
+    final VideoPlayerController? controller = _controller;
+    if (controller == null || !controller.value.isInitialized) return;
+
+    if (controller.value.isPlaying) {
+      controller.pause();
+      return;
+    }
+
+    final Duration position = controller.value.position;
+    final Duration duration = controller.value.duration;
+    if (duration > Duration.zero && position >= duration) {
+      controller.seekTo(Duration.zero);
+    }
+    controller.play();
+  }
+
+  void _seekRelative(Duration offset) {
+    final VideoPlayerController? controller = _controller;
+    if (controller == null || !controller.value.isInitialized) return;
+
+    final Duration duration = controller.value.duration;
+    final int targetMs = (controller.value.position + offset).inMilliseconds
+        .clamp(0, duration.inMilliseconds);
+
+    controller.seekTo(Duration(milliseconds: targetMs));
   }
 
   String _formatDuration(Duration duration) {
@@ -60,6 +94,13 @@ class _AppVideoPreviewState extends State<AppVideoPreview> {
     final int seconds = totalSeconds % 60;
     return '${minutes.toString().padLeft(2, '0')}:'
         '${seconds.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  void dispose() {
+    _controller?.removeListener(_onControllerUpdate);
+    _controller?.dispose();
+    super.dispose();
   }
 
   @override
@@ -84,11 +125,11 @@ class _AppVideoPreviewState extends State<AppVideoPreview> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(color: Colors.white),
-            SizedBox(height: 12),
+            const CircularProgressIndicator(color: Colors.white),
+            const SizedBox(height: 12),
             Text(
               Strings.msgLoadingVideo,
-              style: TextStyle(color: Colors.white70),
+              style: const TextStyle(color: Colors.white70),
             ),
           ],
         ),
@@ -99,6 +140,11 @@ class _AppVideoPreviewState extends State<AppVideoPreview> {
     final double aspectRatio = videoSize.width > 0 && videoSize.height > 0
         ? videoSize.width / videoSize.height
         : 9 / 16;
+
+    final Duration position = controller.value.position;
+    final Duration duration = controller.value.duration;
+    final int durationMs = duration.inMilliseconds.clamp(1, 1 << 31);
+    final bool isPlaying = controller.value.isPlaying;
 
     return Column(
       children: [
@@ -111,59 +157,44 @@ class _AppVideoPreviewState extends State<AppVideoPreview> {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: AnimatedBuilder(
-            animation: controller,
-            builder: (context, _) {
-              final Duration position = controller.value.position;
-              final Duration duration = controller.value.duration;
-
-              return Row(
-                children: [
-                  IconButton(
-                    onPressed: () {
-                      if (controller.value.isPlaying) {
-                        controller.pause();
-                      } else {
-                        controller.play();
-                      }
-                    },
-                    icon: Icon(
-                      controller.value.isPlaying
-                          ? Icons.pause_rounded
-                          : Icons.play_arrow_rounded,
-                      color: Colors.white,
-                    ),
-                  ),
-                  Expanded(
-                    child: Slider(
-                      value: position.inMilliseconds
-                          .clamp(0, duration.inMilliseconds)
-                          .toDouble(),
-                      min: 0,
-                      max: duration.inMilliseconds.toDouble().clamp(1, double.infinity),
-                      activeColor: Colors.white,
-                      onChanged: (value) {
-                        controller.seekTo(
-                          Duration(milliseconds: value.round()),
-                        );
-                      },
-                    ),
-                  ),
-                  Text(
-                    _formatDuration(duration),
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
-                  ),
-                ],
-              );
-            },
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+          child: Column(
+            children: [
+              Text(
+                sprintf(
+                  Strings.labelTimeRecord,
+                  [_formatDuration(position), _formatDuration(duration)],
+                ),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  fontFeatures: [FontFeature.tabularFigures()],
+                ),
+              ),
+              Slider(
+                value: position.inMilliseconds.clamp(0, durationMs).toDouble(),
+                min: 0,
+                max: durationMs.toDouble(),
+                activeColor: Colors.white,
+                inactiveColor: Colors.white24,
+                onChanged: (value) {
+                  controller.seekTo(
+                    Duration(milliseconds: value.round()),
+                  );
+                },
+              ),
+              Center(
+                child: VideoTransportControls(
+                  isPlaying: isPlaying,
+                  onPrevious: () => _seekRelative(-widget.skipInterval),
+                  onPlayPause: _togglePlayPause,
+                  onNext: () => _seekRelative(widget.skipInterval),
+                ),
+              ),
+            ],
           ),
         ),
-        Text(
-          '${videoSize.width.toInt()}x${videoSize.height.toInt()}',
-          style: const TextStyle(color: Colors.white54, fontSize: 11),
-        ),
-        const SizedBox(height: 8),
       ],
     );
   }

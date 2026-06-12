@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:demo_roketota_app/core/extensions/context_extension.dart';
 import 'package:demo_roketota_app/utils/media_file_helper.dart';
 import 'package:demo_roketota_app/utils/strings.dart';
-import 'package:demo_roketota_app/widgets/media/app_video_preview.dart';
 import 'package:demo_roketota_app/widgets/other/app_loading_overlay.dart';
 import 'package:demo_roketota_app/widgets/other/app_top_bar.dart';
 import 'package:flutter/material.dart';
@@ -12,21 +11,19 @@ import 'package:google_mlkit_selfie_segmentation/google_mlkit_selfie_segmentatio
 import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
 
-class MediaPreviewScreen extends StatefulWidget {
-  const MediaPreviewScreen({
+class PhotoPreviewScreen extends StatefulWidget {
+  const PhotoPreviewScreen({
     super.key,
-    required this.filePath,
-    required this.isVideo,
+    required this.filePath
   });
 
   final String filePath;
-  final bool isVideo;
 
   @override
-  State<MediaPreviewScreen> createState() => _MediaPreviewScreenState();
+  State<PhotoPreviewScreen> createState() => _PhotoPreviewScreenState();
 }
 
-class _MediaPreviewScreenState extends State<MediaPreviewScreen> {
+class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
   bool _isDeleting = false;
   bool isOriginal = false;
   String? pathPhoto;
@@ -169,12 +166,8 @@ class _MediaPreviewScreenState extends State<MediaPreviewScreen> {
     final bool? shouldDelete = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(widget.isVideo ? Strings.labelDeleteVideoConfirm : Strings.labelDeletePhotoConfirm),
-        content: Text(
-          widget.isVideo
-              ? Strings.msgDeleteVideoConfirm
-              : Strings.msgDeletePhotoConfirm,
-        ),
+        title: Text(Strings.labelDeletePhotoConfirm),
+        content: Text(Strings.msgDeletePhotoConfirm),
         actions: [
           TextButton(
             onPressed: () => context.pop(false),
@@ -250,22 +243,20 @@ class _MediaPreviewScreenState extends State<MediaPreviewScreen> {
 
   Widget _buildTopBar() {
     return AppTopBar(
-      title: widget.isVideo ? Strings.labelVideoPreview : Strings.labelPhotoPreview,
+      title: Strings.labelPhotoPreview,
       leading: IconButton(
         onPressed: _isDeleting ? null : _onClosePressed,
         icon: const Icon(Icons.close_rounded),
         color: Colors.white,
       ),
-      trailing: widget.isVideo
-          ? null
-          : IconButton(
-              onPressed: pathPhotoSave == null ? null : _toggleView,
-              icon: Icon(
-                isOriginal ? Icons.filter_hdr : Icons.image,
-                color: Colors.white,
-              ),
-              tooltip: isOriginal ? 'Xem ảnh chân dung' : 'Xem ảnh gốc',
-            ),
+      trailing: IconButton(
+        onPressed: pathPhotoSave == null ? null : _toggleView,
+        icon: Icon(
+          isOriginal ? Icons.filter_hdr : Icons.image,
+          color: Colors.white,
+        ),
+        tooltip: isOriginal ? 'Xem ảnh chân dung' : 'Xem ảnh gốc',
+      ),
     );
   }
 
@@ -283,10 +274,6 @@ class _MediaPreviewScreenState extends State<MediaPreviewScreen> {
       );
     }
 
-    if (widget.isVideo) {
-      return AppVideoPreview(videoPath: widget.filePath);
-    }
-
     final String? displayPath;
     if (isOriginal) {
       displayPath = widget.filePath;
@@ -302,7 +289,7 @@ class _MediaPreviewScreenState extends State<MediaPreviewScreen> {
             ? const Center(
                 child: CircularProgressIndicator(color: Colors.white))
             : Image.file(
-                File(displayPath!),
+                File(displayPath),
                 fit: BoxFit.contain,
               ),
       ),

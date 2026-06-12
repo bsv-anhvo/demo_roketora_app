@@ -6,7 +6,8 @@ import 'package:demo_roketota_app/core/extensions/context_extension.dart';
 import 'package:demo_roketota_app/models/camera_settings.dart';
 import 'package:demo_roketota_app/providers/camera/camera_ui_actions_mixin.dart';
 import 'package:demo_roketota_app/providers/camera/camera_ui_state.dart';
-import 'package:demo_roketota_app/screens/media_preview_screen.dart';
+import 'package:demo_roketota_app/screens/photo_preview_screen.dart';
+import 'package:demo_roketota_app/screens/video_preview_screen.dart';
 import 'package:demo_roketota_app/utils/device_requirements.dart';
 import 'package:demo_roketota_app/utils/requirement_ui.dart';
 import 'package:demo_roketota_app/utils/strings.dart';
@@ -121,10 +122,9 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
     cameraHost.setOpeningPreview(true);
 
     final bool? saved = await context.pushFullscreen<bool>(
-      MediaPreviewScreen(
-        filePath: filePath,
-        isVideo: isVideo,
-      ),
+      isVideo
+          ? VideoPreviewScreen(filePath: filePath)
+          : PhotoPreviewScreen(filePath: filePath),
     );
 
     cameraHost.setOpeningPreview(false);
