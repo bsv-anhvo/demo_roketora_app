@@ -71,7 +71,7 @@ class _MediaPreviewScreenState extends State<MediaPreviewScreen> {
       debugPrint('Error processing image: $e');
       if (mounted) {
         setState(() {
-          _errorMessage = 'Lỗi xử lý ảnh: $e';
+          _errorMessage = 'Error processing image: $e';
         });
       }
     }
