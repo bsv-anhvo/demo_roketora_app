@@ -6,6 +6,10 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>This app needs camera permissions to take photos and record videos.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>This app needs permission to save photos to your photo library.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app needs permission to manage photos in your photo library.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>This app needs microphone permission to record audio while shooting video.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>

@@ -1,7 +1,10 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:demo_roketota_app/models/camera_settings.dart';
+import 'package:demo_roketota_app/utils/media_path_builder.dart';
+import 'package:demo_roketota_app/utils/photo_filter_helper.dart';
 import 'package:demo_roketota_app/providers/camera/camera_ui_actions_mixin.dart';
 import 'package:demo_roketota_app/providers/camera/camera_ui_state.dart';
 import 'package:demo_roketota_app/providers/camera/take_photo_state.dart';
@@ -107,11 +110,40 @@ class TakePhotoNotifier extends AutoDisposeNotifier<TakePhotoState>
     }
   }
 
-  Future<void> takePhoto(PhotoCameraState photoState) async {
+  Future<({String filterPath, String originalPath})?> captureDualPhoto(
+    PhotoCameraState photoState,
+  ) async {
     setCapturing(true);
+    final AwesomeFilter activeFilter = photoState.filter;
     try {
-      await photoState.takePhoto();
+      final List<Sensor> sensors =
+          photoState.sensorConfig.sensors.whereType<Sensor>().toList();
+      if (sensors.isEmpty) return null;
+
+      final ({String originalPath, String filterPath}) paths =
+          await MediaPathBuilder.photoPairPaths();
+
+      final CaptureRequest captureRequest = SingleCaptureRequest(
+        paths.originalPath,
+        sensors.first,
+      );
+
+      await photoState.setFilter(AwesomeFilter.None);
+
+      final bool succeeded = await CamerawesomePlugin.takePhoto(captureRequest);
+      if (!succeeded) return null;
+
+      await PhotoFilterHelper.normalizeOrientation(paths.originalPath);
+
+      await File(paths.originalPath).copy(paths.filterPath);
+      await PhotoFilterHelper.applyToFile(paths.filterPath, activeFilter);
+
+      return (
+        filterPath: paths.filterPath,
+        originalPath: paths.originalPath,
+      );
     } finally {
+      await photoState.setFilter(activeFilter);
       setCapturing(false);
     }
   }

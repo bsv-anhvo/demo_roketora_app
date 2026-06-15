@@ -3,6 +3,8 @@ import 'dart:typed_data';
 
 import 'package:demo_roketota_app/core/extensions/context_extension.dart';
 import 'package:demo_roketota_app/utils/media_file_helper.dart';
+import 'package:demo_roketota_app/utils/media_path_builder.dart';
+import 'package:demo_roketota_app/utils/photo_gallery_helper.dart';
 import 'package:demo_roketota_app/utils/photo_image_editor_config.dart';
 import 'package:demo_roketota_app/utils/strings.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
@@ -17,10 +19,12 @@ import 'package:path_provider/path_provider.dart';
 class PhotoPreviewScreen extends StatefulWidget {
   const PhotoPreviewScreen({
     super.key,
-    required this.filePath
+    required this.filePath,
+    this.originalFilePath,
   });
 
   final String filePath;
+  final String? originalFilePath;
 
   @override
   State<PhotoPreviewScreen> createState() => _PhotoPreviewScreenState();
@@ -57,7 +61,20 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
     if (_editedFilePath != null) {
       await File(_editedFilePath!).copy(widget.filePath);
     }
+    final bool savedToGallery =
+        await PhotoGalleryHelper.publishFilterPhoto(widget.filePath);
     if (!mounted) return;
+    if (!savedToGallery) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Photo saved locally, but could not update Gallery. '
+            'Please fully restart the app (flutter run).',
+          ),
+          duration: Duration(seconds: 4),
+        ),
+      );
+    }
     context.pop(true);
   }
 
@@ -231,9 +248,23 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
   Future<void> _onDelete() async {
     if (_isDeleting) return;
     setState(() => _isDeleting = true);
+
     await MediaFileHelper.deleteIfExists(widget.filePath);
+
+    await PhotoGalleryHelper.deleteFilterPhotoFromGallery(widget.filePath);
+
+    final String? originalPath = widget.originalFilePath ??
+        MediaPathBuilder.originalPathForFilter(widget.filePath);
+    if (originalPath != null) {
+      await MediaFileHelper.deleteIfExists(originalPath);
+    }
+
     if (_editedFilePath != null) {
       await MediaFileHelper.deleteIfExists(_editedFilePath!);
+    }
+
+    if (pathPhotoSave != null) {
+      await MediaFileHelper.deleteIfExists(pathPhotoSave!);
     }
     if (!mounted) return;
     context.pop(false);

@@ -101,15 +101,41 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
 
     final int delay = photo.timer.seconds;
     if (delay == 0) {
-      await _notifier.takePhoto(photoState);
+      await _capturePhoto(photoState);
       return;
     }
 
     _notifier.startCountdown(
       delay: delay,
       isMounted: () => mounted,
-      onComplete: () => _notifier.takePhoto(photoState),
+      onComplete: () => _capturePhoto(photoState),
     );
+  }
+
+  Future<void> _capturePhoto(PhotoCameraState photoState) async {
+    _setProcessingMessage(Strings.msgCapturing);
+    try {
+      final ({String filterPath, String originalPath})? result =
+          await _notifier.captureDualPhoto(photoState);
+      if (!mounted) return;
+      _setProcessingMessage(null);
+      if (result != null) {
+        await openMediaPreview(
+          filePath: result.filterPath,
+          originalFilePath: result.originalPath,
+          isVideo: false,
+        );
+      }
+    } catch (e) {
+      _setProcessingMessage(null);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(sprintf(Strings.msgCaptureFailed, [e])),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
+    }
   }
 
   void handleQuickVideoStart(CameraState state) {
@@ -165,14 +191,6 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
 
     switch ((event.status, event.isPicture, event.isVideo)) {
-      case (MediaCaptureStatus.capturing, true, false):
-        _setProcessingMessage(Strings.msgCapturing);
-      case (MediaCaptureStatus.success, true, false):
-        _setProcessingMessage(null);
-        final String? path = mediaPathFromCapture(event);
-        if (path != null) {
-          openMediaPreview(filePath: path, isVideo: false);
-        }
       case (MediaCaptureStatus.failure, true, false):
         _setProcessingMessage(null);
         messenger.showSnackBar(

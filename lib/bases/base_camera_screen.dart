@@ -160,6 +160,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
 
   Future<void> openMediaPreview({
     required String filePath,
+    String? originalFilePath,
     required bool isVideo,
   }) async {
     if (cameraUi.isOpeningPreview || !mounted) return;
@@ -169,7 +170,10 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
     final bool? saved = await context.pushFullscreen<bool>(
       isVideo
           ? VideoPreviewScreen(filePath: filePath)
-          : PhotoPreviewScreen(filePath: filePath),
+          : PhotoPreviewScreen(
+              filePath: filePath,
+              originalFilePath: originalFilePath,
+            ),
     );
 
     cameraHost.setOpeningPreview(false);

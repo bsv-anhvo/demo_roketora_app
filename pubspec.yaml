@@ -46,6 +46,8 @@ dependencies:
   flutter_image_compress: ^2.4.0
   google_mlkit_selfie_segmentation: ^0.10.0
   pro_image_editor: ^12.4.8
+  gal: ^2.3.1
+  photo_manager: ^3.9.0
 
 dev_dependencies:
   flutter_test:
