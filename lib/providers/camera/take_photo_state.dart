@@ -8,7 +8,6 @@ class TakePhotoState {
     this.portraitEnabled = false,
     PhotoAspectRatioOption? selectedPhotoAspectRatio,
     this.countdown,
-    this.pendingQuickVideoStart = false,
     this.isCapturing = false,
   }) : selectedPhotoAspectRatio =
             selectedPhotoAspectRatio ?? kPhotoAspectRatios.first;
@@ -22,7 +21,6 @@ class TakePhotoState {
   final bool portraitEnabled;
   final PhotoAspectRatioOption selectedPhotoAspectRatio;
   final int? countdown;
-  final bool pendingQuickVideoStart;
   final bool isCapturing;
 
   TakePhotoState copyWith({
@@ -32,7 +30,6 @@ class TakePhotoState {
     PhotoAspectRatioOption? selectedPhotoAspectRatio,
     int? countdown,
     bool clearCountdown = false,
-    bool? pendingQuickVideoStart,
     bool? isCapturing,
   }) {
     return TakePhotoState(
@@ -42,8 +39,6 @@ class TakePhotoState {
       selectedPhotoAspectRatio:
           selectedPhotoAspectRatio ?? this.selectedPhotoAspectRatio,
       countdown: clearCountdown ? null : (countdown ?? this.countdown),
-      pendingQuickVideoStart:
-          pendingQuickVideoStart ?? this.pendingQuickVideoStart,
       isCapturing: isCapturing ?? this.isCapturing,
     );
   }

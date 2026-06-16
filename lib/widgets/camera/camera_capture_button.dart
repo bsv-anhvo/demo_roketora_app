@@ -13,6 +13,7 @@ class CameraCaptureButton extends StatefulWidget {
     this.onQuickVideoStart,
     this.onQuickVideoStop,
     this.onVideoRecordStop,
+    this.onHoldRecordingChanged,
     this.recordMaxDuration,
     this.enabled = true,
   });
@@ -26,6 +27,7 @@ class CameraCaptureButton extends StatefulWidget {
   final VoidCallback? onQuickVideoStart;
   final VoidCallback? onQuickVideoStop;
   final VoidCallback? onVideoRecordStop;
+  final ValueChanged<bool>? onHoldRecordingChanged;
 
   /// When set in video mode, draws a countdown ring and auto-stops recording.
   final Duration? recordMaxDuration;
@@ -83,6 +85,9 @@ class _CameraCaptureButtonState extends State<CameraCaptureButton>
         _progressController.isAnimating;
   }
 
+  bool get _supportsHoldRecord =>
+      widget.onQuickVideoStart != null && widget.onQuickVideoStop != null;
+
   @override
   Widget build(BuildContext context) {
     final bool isRecording = widget.state is VideoRecordingCameraState;
@@ -92,10 +97,10 @@ class _CameraCaptureButtonState extends State<CameraCaptureButton>
       onTapDown: widget.enabled ? (_) => _scaleController.forward() : null,
       onTapUp: widget.enabled ? (_) => _onTapUp() : null,
       onTapCancel: widget.enabled ? _onTapCancel : null,
-      onLongPressStart: widget.enabled && widget.isPhotoMode
+      onLongPressStart: widget.enabled && _supportsHoldRecord
           ? (_) => _onLongPressStart()
           : null,
-      onLongPressEnd: widget.enabled && widget.isPhotoMode
+      onLongPressEnd: widget.enabled && _supportsHoldRecord
           ? (_) => _onLongPressEnd()
           : null,
       child: SizedBox(
@@ -173,8 +178,12 @@ class _CameraCaptureButtonState extends State<CameraCaptureButton>
     _wasLongPress = true;
     _scaleController.forward();
     setState(() => _isQuickRecording = true);
+    widget.onHoldRecordingChanged?.call(true);
     _progressController
-      ..duration = CameraCaptureButton.quickRecordMaxDuration
+      ..duration = widget.isPhotoMode
+          ? CameraCaptureButton.quickRecordMaxDuration
+          : (widget.recordMaxDuration ??
+              CameraCaptureButton.quickRecordMaxDuration)
       ..forward(from: 0);
     widget.onQuickVideoStart!();
   }
@@ -189,6 +198,7 @@ class _CameraCaptureButtonState extends State<CameraCaptureButton>
     _resetRecordProgress();
     _scaleController.reverse();
     setState(() => _isQuickRecording = false);
+    widget.onHoldRecordingChanged?.call(false);
     widget.onQuickVideoStop?.call();
   }
 

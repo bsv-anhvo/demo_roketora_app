@@ -19,6 +19,8 @@ class Strings {
   static String labelResolution = 'Resolution';
   static String labelFps = 'FPS';
   static String labelTimeRecord = '%s / %s';
+  static String labelHoldToRecordVideo = 'Hold button to record';
+  static String labelRecording = 'REC';
 
   static String labelActionCancel = 'Cancel';
   static String labelActionDelete = 'Delete';

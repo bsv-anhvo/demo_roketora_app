@@ -69,11 +69,8 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
 
   @override
   SaveConfig buildSaveConfig() {
-    return SaveConfig.photoAndVideo(
-      initialCaptureMode: CaptureMode.photo,
-      photoPathBuilder: MediaPathBuilder.photoPath,
-      videoPathBuilder: MediaPathBuilder.videoPath,
-      videoOptions: buildVideoOptions(),
+    return SaveConfig.photo(
+      pathBuilder: MediaPathBuilder.photoPath,
     );
   }
 
@@ -138,34 +135,6 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
     }
   }
 
-  void handleQuickVideoStart(CameraState state) {
-    state.when(
-      onPhotoMode: (photoState) {
-        _notifier.setPendingQuickVideoStart(true);
-        photoState.setState(CaptureMode.video);
-      },
-      onVideoMode: (videoState) {
-        if (_photoState.pendingQuickVideoStart) {
-          _notifier.setPendingQuickVideoStart(false);
-          videoState.startRecording();
-        }
-      },
-    );
-  }
-
-  void handleQuickVideoStop(CameraState state) {
-    state.when(
-      onVideoRecordingMode: (recordingState) {
-        _notifier.setPendingQuickVideoStart(false);
-        _setProcessingMessage(Strings.msgProcessingVideo);
-        recordingState.stopRecording();
-      },
-      onVideoMode: (_) {
-        _notifier.setPendingQuickVideoStart(false);
-      },
-    );
-  }
-
   void _setProcessingMessage(String? message) {
     if (_processingMessage == message) return;
     setState(() => _processingMessage = message);
@@ -196,20 +165,6 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
         messenger.showSnackBar(
           SnackBar(
             content: Text(sprintf(Strings.msgCaptureFailed, [event.exception])),
-            backgroundColor: Colors.red.shade700,
-          ),
-        );
-      case (MediaCaptureStatus.success, false, true):
-        _setProcessingMessage(null);
-        final String? path = mediaPathFromCapture(event);
-        if (path != null) {
-          openMediaPreview(filePath: path, isVideo: true);
-        }
-      case (MediaCaptureStatus.failure, false, true):
-        _setProcessingMessage(null);
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(sprintf(Strings.msgRecordingFailed, [event.exception])),
             backgroundColor: Colors.red.shade700,
           ),
         );
@@ -288,8 +243,6 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
               onPhotoTap: () async {
                 await state.when(onPhotoMode: handlePhotoCapture);
               },
-              onQuickVideoStart: () => handleQuickVideoStart(state),
-              onQuickVideoStop: () => handleQuickVideoStop(state),
             ),
           ),
         ],

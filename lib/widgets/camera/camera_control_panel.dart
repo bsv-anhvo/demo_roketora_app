@@ -84,12 +84,12 @@ class CameraControlPanel extends StatelessWidget {
                   label: timer.label,
                   onTap: onTimerTap,
                 ),
-                _ControlChip(
-                  icon: Icons.face_retouching_natural_outlined,
-                  label: Strings.labelPortrait,
-                  isActive: portraitEnabled,
-                  onTap: onPortraitTap,
-                ),
+                // _ControlChip(
+                //   icon: Icons.face_retouching_natural_outlined,
+                //   label: Strings.labelPortrait,
+                //   isActive: portraitEnabled,
+                //   onTap: onPortraitTap,
+                // ),
               ],
               _ControlChip(
                 icon: Icons.hd_outlined,

@@ -146,7 +146,7 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
     super.initState();
     pathPhoto = widget.filePath;
     isOriginal = true;
-    runTask();
+    // runTask();
   }
 
   void runTask() async {

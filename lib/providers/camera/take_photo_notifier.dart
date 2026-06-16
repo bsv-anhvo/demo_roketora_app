@@ -45,10 +45,6 @@ class TakePhotoNotifier extends AutoDisposeNotifier<TakePhotoState>
     state = state.copyWith(selectedPhotoAspectRatio: option);
   }
 
-  void setPendingQuickVideoStart(bool value) {
-    state = state.copyWith(pendingQuickVideoStart: value);
-  }
-
   void setCapturing(bool value) {
     state = state.copyWith(isCapturing: value);
   }
@@ -62,14 +58,7 @@ class TakePhotoNotifier extends AutoDisposeNotifier<TakePhotoState>
   }
 
   void onCameraReady(CameraState cameraState) {
-    Future.microtask(() {
-      if (state.pendingQuickVideoStart && cameraState is VideoCameraState) {
-        setPendingQuickVideoStart(false);
-        cameraState.startRecording();
-      }
-
-      applyCameraReadyBaseSync(cameraState);
-    });
+    Future.microtask(() => applyCameraReadyBaseSync(cameraState));
   }
 
   Future<void> applyPhotoAspectRatio(SensorConfig sensorConfig) async {

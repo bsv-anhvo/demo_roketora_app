@@ -24,12 +24,29 @@ class VideoRecordScreen extends CameraScreenBase {
   ConsumerState<VideoRecordScreen> createState() => _VideoRecordScreenState();
 }
 
-class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen> {
+class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
+    with SingleTickerProviderStateMixin {
   String? _processingMessage;
+  bool _isHoldRecording = false;
+  late final AnimationController _recordPulseController;
 
   VideoRecordNotifier get _notifier => ref.read(videoRecordProvider.notifier);
 
   VideoRecordState get _videoState => ref.watch(videoRecordProvider);
+
+  @override
+  void initState() {
+    super.initState();
+    _recordPulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+  }
+
+  @override
+  void onDispose() {
+    _recordPulseController.dispose();
+  }
 
   @override
   CameraUiHost get cameraHost => _notifier;
@@ -110,6 +127,52 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen> {
     _setProcessingMessage(Strings.msgProcessingVideo);
   }
 
+  void handleHoldRecordStart(CameraState state) {
+    state.when(
+      onVideoMode: (videoState) => videoState.startRecording(),
+      onPhotoMode: (_) {},
+      onVideoRecordingMode: (_) {},
+      onPreviewMode: (_) {},
+      onAnalysisOnlyMode: (_) {},
+    );
+  }
+
+  void handleHoldRecordStop(CameraState state) {
+    state.when(
+      onVideoRecordingMode: (recordingState) {
+        _onVideoRecordStop();
+        recordingState.stopRecording();
+      },
+      onVideoMode: (_) {},
+      onPhotoMode: (_) {},
+      onPreviewMode: (_) {},
+      onAnalysisOnlyMode: (_) {},
+    );
+  }
+
+  void _onHoldRecordingChanged(bool isHolding) {
+    if (_isHoldRecording == isHolding) return;
+    setState(() => _isHoldRecording = isHolding);
+    if (isHolding) {
+      _recordPulseController.repeat(reverse: true);
+    } else if (!_videoState.isRecording) {
+      _recordPulseController
+        ..stop()
+        ..reset();
+    }
+  }
+
+  void _syncRecordPulseAnimation() {
+    final bool shouldPulse = _isHoldRecording || _videoState.isRecording;
+    if (shouldPulse && !_recordPulseController.isAnimating) {
+      _recordPulseController.repeat(reverse: true);
+    } else if (!shouldPulse && _recordPulseController.isAnimating) {
+      _recordPulseController
+        ..stop()
+        ..reset();
+    }
+  }
+
   @override
   void handleCaptureEvent(BuildContext context, MediaCapture event) {
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
@@ -117,9 +180,16 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen> {
     switch ((event.status, event.isPicture, event.isVideo)) {
       case (MediaCaptureStatus.capturing, false, true):
         _notifier.startRecordTimer(isMounted: () => mounted);
+        _syncRecordPulseAnimation();
       case (MediaCaptureStatus.success, false, true):
         _setProcessingMessage(null);
         _notifier.stopRecordTimer();
+        if (mounted) {
+          setState(() => _isHoldRecording = false);
+          _recordPulseController
+            ..stop()
+            ..reset();
+        }
         final String? path = mediaPathFromCapture(event);
         if (path != null) {
           openMediaPreview(filePath: path, isVideo: true);
@@ -127,6 +197,12 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen> {
       case (MediaCaptureStatus.failure, false, true):
         _setProcessingMessage(null);
         _notifier.stopRecordTimer();
+        if (mounted) {
+          setState(() => _isHoldRecording = false);
+          _recordPulseController
+            ..stop()
+            ..reset();
+        }
         messenger.showSnackBar(
           SnackBar(
             content: Text(sprintf(Strings.msgRecordingFailed, [event.exception])),
@@ -186,22 +262,66 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen> {
   @override
   Widget? buildOverlay() {
     final bool isRecording = _videoState.isRecording;
+    final bool showRecordFx = _isHoldRecording || isRecording;
     final String? processingMessage = _processingMessage;
 
-    if (!isRecording && processingMessage == null) return null;
+    if (!showRecordFx && processingMessage == null) return null;
+
+    final Duration maxDuration = CameraCaptureButton.videoRecordMaxDuration;
+    final double progress = isRecording
+        ? (_videoState.recordElapsed.inMilliseconds / maxDuration.inMilliseconds)
+            .clamp(0.0, 1.0)
+        : 0.0;
 
     return Stack(
       children: [
+        if (showRecordFx)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: AnimatedBuilder(
+                animation: _recordPulseController,
+                builder: (context, _) {
+                  final double pulse = _recordPulseController.value;
+                  return DecoratedBox(
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: Colors.redAccent.withValues(alpha: 0.35 + pulse * 0.55),
+                        width: 3 + pulse * 2,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
         if (processingMessage != null)
           AppLoadingOverlay(message: processingMessage),
-        if (isRecording)
+        if (showRecordFx)
           Align(
             alignment: Alignment.topCenter,
             child: Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: VideoRecordElapsedTimer(
-                elapsed: _videoState.recordElapsed,
-                maxDuration: CameraCaptureButton.videoRecordMaxDuration,
+              padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (isRecording)
+                    VideoRecordElapsedTimer(
+                      elapsed: _videoState.recordElapsed,
+                      maxDuration: maxDuration,
+                    )
+                  else
+                    _RecordingPreparingBadge(),
+                  const SizedBox(height: 10),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: isRecording ? progress : null,
+                      minHeight: 4,
+                      backgroundColor: Colors.white24,
+                      color: Colors.redAccent,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -217,7 +337,17 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           buildZoomSelector(state),
-          const Gap(16),
+          const Gap(8),
+          if (!_isHoldRecording && !_videoState.isRecording)
+            Text(
+              Strings.labelHoldToRecordVideo,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.7),
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          const Gap(8),
           buildCaptureRow(
             state,
             CameraCaptureButton(
@@ -226,10 +356,51 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen> {
               enabled: true,
               recordMaxDuration: CameraCaptureButton.videoRecordMaxDuration,
               onPhotoTap: () async {},
+              onQuickVideoStart: () => handleHoldRecordStart(state),
+              onQuickVideoStop: () => handleHoldRecordStop(state),
+              onHoldRecordingChanged: _onHoldRecordingChanged,
               onVideoRecordStop: _onVideoRecordStop,
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _RecordingPreparingBadge extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: const BoxDecoration(
+                color: Colors.redAccent,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              Strings.labelRecording,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 1.2,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
