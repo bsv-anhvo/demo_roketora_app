@@ -244,10 +244,7 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
             },
             onToggleExposure: _notifier.toggleExposureSlider,
             onToggleFilter: _notifier.toggleFilterStrip,
-            onExposureChanged: (value) {
-              _notifier.setExposure(value);
-              state.sensorConfig.setBrightness(value);
-            },
+            onExposureChanged: (value) => _notifier.applyExposure(value),
             onTimerTap: () {},
             onPortraitTap: () {},
             onResolutionTap: pickVideoQuality,

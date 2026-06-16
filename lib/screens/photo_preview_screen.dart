@@ -63,6 +63,10 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
     }
     final bool savedToGallery =
         await PhotoGalleryHelper.publishFilterPhoto(widget.filePath);
+
+    // Delete file edited from internal storage
+    await MediaFileHelper.deleteIfExists(widget.filePath);
+
     if (!mounted) return;
     if (!savedToGallery) {
       ScaffoldMessenger.of(context).showSnackBar(

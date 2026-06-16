@@ -189,13 +189,19 @@ class _ExposureSlider extends StatelessWidget {
             ),
           ),
           Text(
-            '${(value * 100).round()}%',
+            _formatExposureOffset(value),
             style: const TextStyle(color: Colors.white70, fontSize: 12),
           ),
         ],
       ),
     );
   }
+}
+
+String _formatExposureOffset(double value) {
+  final int offset = ((value - 0.5) * 200).round();
+  if (offset == 0) return '0';
+  return offset > 0 ? '+$offset' : '$offset';
 }
 
 Future<T?> showCameraPickerSheet<T>({

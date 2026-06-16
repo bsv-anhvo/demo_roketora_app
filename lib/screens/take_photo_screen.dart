@@ -202,10 +202,7 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
             },
             onToggleExposure: _notifier.toggleExposureSlider,
             onToggleFilter: _notifier.toggleFilterStrip,
-            onExposureChanged: (value) {
-              _notifier.setExposure(value);
-              state.sensorConfig.setBrightness(value);
-            },
+            onExposureChanged: (value) => _notifier.applyExposure(value),
             onTimerTap: () => _notifier.setTimer(photo.timer.next),
             onPortraitTap: () async {
               _notifier.setPortraitEnabled(!photo.portraitEnabled);
