@@ -8,6 +8,7 @@ import 'package:demo_roketota_app/providers/camera/camera_ui_actions_mixin.dart'
 import 'package:demo_roketota_app/providers/camera/camera_ui_state.dart';
 import 'package:demo_roketota_app/screens/photo_preview_screen.dart';
 import 'package:demo_roketota_app/screens/video_preview_screen.dart';
+import 'package:demo_roketota_app/utils/camera_focus_helper.dart';
 import 'package:demo_roketota_app/utils/device_requirements.dart';
 import 'package:demo_roketota_app/utils/requirement_ui.dart';
 import 'package:demo_roketota_app/utils/strings.dart';
@@ -334,6 +335,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
                             });
                           },
                         ),
+                        onPreviewTapBuilder: CameraFocusHelper.buildPreviewTap,
                         onMediaCaptureEvent: (event) =>
                             handleCaptureEvent(context, event),
                         topActionsBuilder: (state) {
