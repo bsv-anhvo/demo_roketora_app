@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:flutter/foundation.dart';
@@ -21,108 +20,100 @@ class MediaFileHelper {
     return Directory('${baseDir.path}/roketora_media').create(recursive: true);
   }
 
-  static Future<Directory> _videoStampDirectory() async {
+  static Future<({String originalPath, String filterPath})> photoPairPaths() async {
+    final Directory stampDir = await _mediaStampDirectory();
+    final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+    return (
+      originalPath: '${stampDir.path}/photo_original_$timestamp.jpg',
+      filterPath: '${stampDir.path}/photo_$timestamp.jpg',
+    );
+  }
+
+  static Future<Directory> _mediaStampDirectory() async {
     final Directory cacheDir = await getApplicationCacheDirectory();
     return Directory('${cacheDir.path}/roketora_media_stamp')
         .create(recursive: true);
   }
 
-  /// Removes leftover stamp videos (e.g. after kill app on preview).
-  static Future<void> clearVideoStampDirectory() async {
+  static Future<Directory> mediaStampDirectoryForWrite() =>
+      _mediaStampDirectory();
+
+  /// Removes leftover stamp videos/images (e.g. after kill app on preview).
+  static Future<void> clearMediaStampDirectory() async {
     try {
-      final Directory dir = await _videoStampDirectory();
+      final Directory dir = await _mediaStampDirectory();
       if (!await dir.exists()) return;
 
       await for (final FileSystemEntity entity in dir.list()) {
         await entity.delete(recursive: true);
       }
     } catch (e, stackTrace) {
-      debugPrint('Clear video stamp directory failed: $e\n$stackTrace');
+      debugPrint('Clear media stamp directory failed: $e\n$stackTrace');
     }
   }
 
-  /// Scratch path required by camerawesome for hardware-button capture only.
-  /// Dual capture reads bytes and deletes the file immediately.
   static Future<CaptureRequest> photoPath(List<Sensor> sensors) async {
-    final Directory scratchDir = await getTemporaryDirectory();
-    final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
-    final String scratchPath = '${scratchDir.path}/photo_$timestamp.jpg';
+    final ({String originalPath, String filterPath}) paths =
+        await photoPairPaths();
 
     if (sensors.length == 1) {
-      return SingleCaptureRequest(scratchPath, sensors.first);
+      return SingleCaptureRequest(paths.originalPath, sensors.first);
     }
+
+    final Directory stampDir = await _mediaStampDirectory();
+    final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
 
     return MultipleCaptureRequest({
       for (final Sensor sensor in sensors)
         sensor:
-            '${scratchDir.path}/${sensor.position == SensorPosition.front ? 'front' : 'back'}_$timestamp.jpg',
+            '${stampDir.path}/${sensor.position == SensorPosition.front ? 'front' : 'back'}_$timestamp.jpg',
     });
   }
 
-  /// Returns `true` when the image was saved to the gallery.
-  static Future<bool> publishFilterPhotoBytes(
-    Uint8List bytes, {
-    String? name,
+  static Future<void> deletePhotoStampPair({
+    required String filterStampPath,
+    String? originalStampPath,
+    Iterable<String> extraPaths = const <String>[],
   }) async {
-    try {
-      final String photoName =
-          name ?? 'photo_${DateTime.now().millisecondsSinceEpoch}';
-      await Gal.putImageBytes(bytes, album: 'Roketora', name: photoName);
-      return true;
-    } on GalException catch (e) {
-      debugPrint('Gallery publish failed: ${e.type.message}');
-      return false;
-    } on MissingPluginException catch (e) {
-      debugPrint(
-        'Gal plugin is not linked ($e). '
-            'Stop the app completely, then run: flutter clean && flutter pub get && flutter run',
-      );
-      return false;
-    } on PlatformException catch (e) {
-      debugPrint('Gallery publish platform error: $e');
-      return false;
-    } catch (e, stackTrace) {
-      debugPrint('Gallery publish failed: $e\n$stackTrace');
-      return false;
+    await deleteIfExists(filterStampPath);
+    if (originalStampPath != null) {
+      await deleteIfExists(originalStampPath);
+    }
+    for (final String path in extraPaths) {
+      await deleteIfExists(path);
     }
   }
 
-  /// Persists the unfiltered original to app documents. Only call on Save.
-  static Future<String> saveOriginalPhotoBytes(
-    Uint8List bytes, {
-    required String timestamp,
-  }) async {
-    final Directory mediaDir = await _mediaDirectory();
-    final String path = '${mediaDir.path}/photo_original_$timestamp.jpg';
-    await File(path).writeAsBytes(bytes);
-    return path;
-  }
-
-  /// Saves filter photo to Gallery and original photo to internal storage.
+  /// Publishes filter stamp to Gallery, moves original stamp to [roketora_media].
   static Future<bool> saveConfirmedPhoto({
-    required Uint8List filterBytes,
-    required Uint8List originalBytes,
+    required String filterStampPath,
+    required String originalStampPath,
   }) async {
-    final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
-    String? originalPath;
+    String? persistedOriginalPath;
 
     try {
-      originalPath = await saveOriginalPhotoBytes(
-        originalBytes,
-        timestamp: timestamp,
-      );
-      final bool gallerySaved = await publishFilterPhotoBytes(
-        filterBytes,
-        name: 'photo_$timestamp',
-      );
-      if (!gallerySaved) {
-        await deleteIfExists(originalPath);
+      final bool gallerySaved = await publishFilterPhoto(filterStampPath);
+      if (!gallerySaved) return false;
+
+      final Directory mediaDir = await _mediaDirectory();
+      final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+      persistedOriginalPath =
+          '${mediaDir.path}/photo_original_$timestamp.jpg';
+
+      final File originalFile = File(originalStampPath);
+      try {
+        await originalFile.rename(persistedOriginalPath);
+      } catch (_) {
+        await originalFile.copy(persistedOriginalPath);
+        await originalFile.delete();
       }
-      return gallerySaved;
+
+      await deleteIfExists(filterStampPath);
+      return true;
     } catch (e, stackTrace) {
       debugPrint('Save confirmed photo failed: $e\n$stackTrace');
-      if (originalPath != null) {
-        await deleteIfExists(originalPath);
+      if (persistedOriginalPath != null) {
+        await deleteIfExists(persistedOriginalPath);
       }
       return false;
     }
@@ -138,7 +129,7 @@ class MediaFileHelper {
   }
 
   static Future<CaptureRequest> videoPath(List<Sensor> sensors) async {
-    final Directory stampDir = await _videoStampDirectory();
+    final Directory stampDir = await _mediaStampDirectory();
     final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
 
     if (sensors.length == 1) {
@@ -149,7 +140,7 @@ class MediaFileHelper {
     return MultipleCaptureRequest({
       for (final Sensor sensor in sensors)
         sensor:
-            '${stampDir.path}/${sensor.position == SensorPosition.front ? 'front' : 'back'}_$timestamp.mp4',
+        '${stampDir.path}/${sensor.position == SensorPosition.front ? 'front' : 'back'}_$timestamp.mp4',
     });
   }
 

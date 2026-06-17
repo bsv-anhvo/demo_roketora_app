@@ -22,7 +22,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _checkLocationRequirements());
-    MediaFileHelper.clearVideoStampDirectory();
+    MediaFileHelper.clearMediaStampDirectory();
   }
 
   Future<void> _checkLocationRequirements() async {
@@ -38,12 +38,14 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _openTakePhoto(BuildContext context) {
+  Future<void> _openTakePhoto(BuildContext context) async {
+    await MediaFileHelper.clearMediaStampDirectory();
     if (!context.mounted) return;
     context.push(const TakePhotoScreen());
   }
 
-  void _openVideoRecord(BuildContext context) {
+  Future<void> _openVideoRecord(BuildContext context) async {
+    await MediaFileHelper.clearMediaStampDirectory();
     if (!context.mounted) return;
     context.push(const VideoRecordScreen());
   }

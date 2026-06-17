@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:camerawesome/pigeon.dart';
@@ -159,9 +158,8 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
   }
 
   Future<void> openMediaPreview({
-    String? filePath,
-    Uint8List? filterBytes,
-    Uint8List? originalBytes,
+    required String filePath,
+    String? originalFilePath,
     required bool isVideo,
   }) async {
     if (cameraUi.isOpeningPreview || !mounted) return;
@@ -175,10 +173,10 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
 
     final bool? saved = await context.pushFullscreen<bool>(
       isVideo
-          ? VideoPreviewScreen(filePath: filePath!)
+          ? VideoPreviewScreen(filePath: filePath)
           : PhotoPreviewScreen(
-              filterBytes: filterBytes!,
-              originalBytes: originalBytes,
+              filePath: filePath,
+              originalFilePath: originalFilePath,
             ),
     );
 
