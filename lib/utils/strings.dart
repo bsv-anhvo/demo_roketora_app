@@ -51,4 +51,7 @@ class Strings {
   static String msgVideoSaved = 'Video saved';
   static String msgPhotoSaved = 'Photo saved';
   static String msgDecodeImageFailed = 'Cannot decode image: %s';
+  static String msgOriginalFileIsMissing = 'Could not save photo. Original file is missing.';
+  static String msgCouldNotSaveToGallery = 'Could not save to Gallery.';
+  static String msgCouldNotSaveVideo = 'Could not save video. Please try again.';
 }

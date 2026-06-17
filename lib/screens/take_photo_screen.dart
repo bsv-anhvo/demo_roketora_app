@@ -3,7 +3,8 @@ import 'dart:io';
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:camerawesome/pigeon.dart';
 import 'package:demo_roketota_app/bases/base_camera_screen.dart';
-import 'package:demo_roketota_app/models/camera_settings.dart';
+import 'package:demo_roketota_app/core/extensions/snack_bar_extension.dart';
+import 'package:demo_roketota_app/core/models/camera_settings.dart';
 import 'package:demo_roketota_app/providers/camera/camera_ui_actions_mixin.dart';
 import 'package:demo_roketota_app/providers/camera/camera_ui_state.dart';
 import 'package:demo_roketota_app/providers/camera/take_photo_notifier.dart';
@@ -126,11 +127,9 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
     } catch (e) {
       _setProcessingMessage(null);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(sprintf(Strings.msgCaptureFailed, [e])),
-          backgroundColor: Colors.red.shade700,
-        ),
+      sprintf(Strings.msgCaptureFailed, [e]).showSnackBar(
+        context,
+        backgroundColor: Colors.red.shade700,
       );
     }
   }

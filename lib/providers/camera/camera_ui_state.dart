@@ -1,4 +1,4 @@
-import 'package:demo_roketota_app/models/camera_settings.dart';
+import 'package:demo_roketota_app/core/models/camera_settings.dart';
 import 'package:demo_roketota_app/utils/camera_zoom_helper.dart';
 
 class CameraUiState {

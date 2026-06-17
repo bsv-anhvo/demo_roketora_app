@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:camerawesome/pigeon.dart';
-import 'package:demo_roketota_app/models/camera_settings.dart';
+import 'package:demo_roketota_app/core/models/camera_settings.dart';
 import 'package:demo_roketota_app/providers/camera/camera_ui_actions_mixin.dart';
 import 'package:demo_roketota_app/providers/camera/camera_ui_state.dart';
 import 'package:demo_roketota_app/providers/camera/video_record_state.dart';

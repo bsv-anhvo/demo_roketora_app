@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:demo_roketota_app/core/extensions/context_extension.dart';
+import 'package:demo_roketota_app/core/extensions/snack_bar_extension.dart';
 import 'package:demo_roketota_app/utils/media_file_helper.dart';
 import 'package:demo_roketota_app/utils/photo_image_editor_config.dart';
 import 'package:demo_roketota_app/utils/strings.dart';
@@ -68,12 +69,7 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
     if (originalPath == null) {
       if (!mounted) return;
       setState(() => _isSaving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not save photo. Original file is missing.'),
-          duration: Duration(seconds: 4),
-        ),
-      );
+      Strings.msgOriginalFileIsMissing.showSnackBar(context);
       return;
     }
 
@@ -86,15 +82,7 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
     setState(() => _isSaving = false);
 
     if (!saved) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Could not save to Gallery. '
-            'Please fully restart the app (flutter run).',
-          ),
-          duration: Duration(seconds: 4),
-        ),
-      );
+      Strings.msgCouldNotSaveToGallery.showSnackBar(context);
       return;
     }
 

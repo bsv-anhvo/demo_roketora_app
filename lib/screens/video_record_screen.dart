@@ -1,7 +1,7 @@
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:camerawesome/pigeon.dart';
 import 'package:demo_roketota_app/bases/base_camera_screen.dart';
-import 'package:demo_roketota_app/models/camera_settings.dart';
+import 'package:demo_roketota_app/core/models/camera_settings.dart';
 import 'package:demo_roketota_app/providers/camera/camera_ui_actions_mixin.dart';
 import 'package:demo_roketota_app/providers/camera/camera_ui_state.dart';
 import 'package:demo_roketota_app/providers/camera/video_record_notifier.dart';
@@ -266,10 +266,6 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
     if (!showRecordFx && processingMessage == null) return null;
 
     final Duration maxDuration = Constants.videoRecordMaxDuration;
-    final double progress = isRecording
-        ? (_videoState.recordElapsed.inMilliseconds / maxDuration.inMilliseconds)
-            .clamp(0.0, 1.0)
-        : 0.0;
 
     return Stack(
       children: [
@@ -299,28 +295,10 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
             alignment: Alignment.topCenter,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (isRecording)
-                    VideoRecordElapsedTimer(
-                      elapsed: _videoState.recordElapsed,
-                      maxDuration: maxDuration,
-                    )
-                  else
-                    _RecordingPreparingBadge(),
-                  const SizedBox(height: 10),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: isRecording ? progress : null,
-                      minHeight: 4,
-                      backgroundColor: Colors.white24,
-                      color: Colors.redAccent,
-                    ),
-                  ),
-                ],
-              ),
+              child: isRecording ? VideoRecordElapsedTimer(
+                elapsed: _videoState.recordElapsed,
+                maxDuration: maxDuration,
+              ) : _RecordingPreparingBadge(),
             ),
           ),
       ],

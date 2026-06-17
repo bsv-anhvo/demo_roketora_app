@@ -1,4 +1,5 @@
 import 'package:demo_roketota_app/core/extensions/context_extension.dart';
+import 'package:demo_roketota_app/core/extensions/snack_bar_extension.dart';
 import 'package:demo_roketota_app/utils/media_file_helper.dart';
 import 'package:demo_roketota_app/utils/strings.dart';
 import 'package:demo_roketota_app/widgets/media/app_video_preview.dart';
@@ -35,12 +36,7 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
     setState(() => _isSaving = false);
 
     if (!saved) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not save video. Please try again.'),
-          duration: Duration(seconds: 4),
-        ),
-      );
+      Strings.msgCouldNotSaveVideo.showSnackBar(context);
       return;
     }
 
