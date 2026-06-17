@@ -2,9 +2,8 @@ import 'package:demo_roketota_app/core/extensions/context_extension.dart';
 import 'package:demo_roketota_app/screens/take_photo_screen.dart';
 import 'package:demo_roketota_app/screens/video_record_screen.dart';
 import 'package:demo_roketota_app/utils/device_requirements.dart';
-import 'package:demo_roketota_app/utils/requirement_ui.dart';
 import 'package:demo_roketota_app/utils/strings.dart';
-import 'package:demo_roketota_app/widgets/other/app_action_button.dart';
+import 'package:demo_roketota_app/widgets/common/app_action_button.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 
@@ -33,7 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => _locationReady = status == LocationRequirementStatus.ready);
 
     if (status != LocationRequirementStatus.ready) {
-      await RequirementUi.showLocationIssue(context, status);
+      await DeviceRequirements.showLocationIssue(context, status);
     }
   }
 
@@ -72,34 +71,9 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               if (!_locationReady) ...[
                 const Gap(16),
-                Material(
-                  color: colorScheme.errorContainer,
-                  borderRadius: BorderRadius.circular(12),
-                  child: InkWell(
-                    onTap: _checkLocationRequirements,
-                    borderRadius: BorderRadius.circular(12),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.location_off_outlined,
-                            color: colorScheme.onErrorContainer,
-                          ),
-                          const Gap(12),
-                          Expanded(
-                            child: Text(
-                              Strings.msgLocationPermissionOrGPSIsNotReady,
-                              style: TextStyle(
-                                color: colorScheme.onErrorContainer,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                _buildMsgLocationPermissionOrGPSIsNotReadyWidget(
+                  colorScheme: colorScheme,
+                  onTapEvent: _checkLocationRequirements,
                 ),
               ],
               const Spacer(),
@@ -131,4 +105,41 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+}
+
+Widget _buildMsgLocationPermissionOrGPSIsNotReadyWidget({
+  required ColorScheme colorScheme,
+  required VoidCallback onTapEvent,
+}) {
+  const borderRadius = BorderRadius.all(Radius.circular(12));
+
+  return Material(
+    color: colorScheme.errorContainer,
+    borderRadius: borderRadius,
+    child: InkWell(
+      onTap: onTapEvent,
+      borderRadius: borderRadius,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            Icon(
+              Icons.location_off_outlined,
+              color: colorScheme.onErrorContainer,
+            ),
+            const Gap(12),
+            Expanded(
+              child: Text(
+                Strings.msgLocationPermissionOrGPSIsNotReady,
+                style: TextStyle(
+                  color: colorScheme.onErrorContainer,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }

@@ -8,10 +8,10 @@ import 'package:demo_roketota_app/providers/camera/camera_ui_actions_mixin.dart'
 import 'package:demo_roketota_app/providers/camera/camera_ui_state.dart';
 import 'package:demo_roketota_app/providers/camera/take_photo_notifier.dart';
 import 'package:demo_roketota_app/providers/camera/take_photo_state.dart';
-import 'package:demo_roketota_app/utils/media_path_builder.dart';
+import 'package:demo_roketota_app/utils/media_file_helper.dart';
 import 'package:demo_roketota_app/utils/strings.dart';
-import 'package:demo_roketota_app/widgets/other/app_loading_overlay.dart';
-import 'package:demo_roketota_app/widgets/camera/camera_capture_button.dart';
+import 'package:demo_roketota_app/widgets/common/app_camera_capture_button.dart';
+import 'package:demo_roketota_app/widgets/common/app_loading_overlay.dart';
 import 'package:demo_roketota_app/widgets/camera/camera_control_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
@@ -42,7 +42,7 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
   bool get isPhotoMode => true;
 
   @override
-  String get screenTitle => 'Photo';
+  String get screenTitle => Strings.labelTakePhoto;
 
   @override
   Key get cameraWidgetKey => const ValueKey('photo_camera');
@@ -70,7 +70,7 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
   @override
   SaveConfig buildSaveConfig() {
     return SaveConfig.photo(
-      pathBuilder: MediaPathBuilder.photoPath,
+      pathBuilder: MediaFileHelper.photoPath,
     );
   }
 
@@ -183,7 +183,7 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
         const Spacer(),
         if (ui.showFilterStrip) ...[
           buildFilterStrip(state),
-          const SizedBox(height: 8),
+          const Gap(8),
         ],
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -215,7 +215,7 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
             onResolutionTap: () => pickPhotoAspectRatio(state),
           ),
         ),
-        const SizedBox(height: 12),
+        const Gap(12),
       ],
     );
   }
@@ -233,7 +233,7 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
           const Gap(16),
           buildCaptureRow(
             state,
-            CameraCaptureButton(
+            AppCameraCaptureButton(
               state: state,
               isPhotoMode: true,
               enabled: !photo.isCapturing && photo.countdown == null,

@@ -2,7 +2,9 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:camerawesome/camerawesome_plugin.dart';
+import 'package:demo_roketota_app/utils/strings.dart';
 import 'package:image/image.dart' as img;
+import 'package:sprintf/sprintf.dart';
 
 class PhotoFilterHelper {
   const PhotoFilterHelper._();
@@ -11,7 +13,7 @@ class PhotoFilterHelper {
     final Uint8List bytes = await File(filePath).readAsBytes();
     final img.Image? image = img.decodeImage(bytes);
     if (image == null) {
-      throw Exception('Cannot decode image: $filePath');
+      throw Exception(sprintf(Strings.msgDecodeImageFailed, [filePath]));
     }
     return image;
   }
@@ -37,7 +39,7 @@ class PhotoFilterHelper {
 
     final List<int>? encoded = img.encodeNamedImage(filePath, output);
     if (encoded == null) {
-      throw Exception('Cannot encode image: $filePath');
+      throw Exception(sprintf(Strings.msgDecodeImageFailed, [filePath]));
     }
 
     await File(filePath).writeAsBytes(encoded);

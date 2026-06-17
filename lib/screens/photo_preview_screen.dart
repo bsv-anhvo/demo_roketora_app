@@ -3,13 +3,12 @@ import 'dart:typed_data';
 
 import 'package:demo_roketota_app/core/extensions/context_extension.dart';
 import 'package:demo_roketota_app/utils/media_file_helper.dart';
-import 'package:demo_roketota_app/utils/media_path_builder.dart';
-import 'package:demo_roketota_app/utils/photo_gallery_helper.dart';
 import 'package:demo_roketota_app/utils/photo_image_editor_config.dart';
 import 'package:demo_roketota_app/utils/strings.dart';
+import 'package:demo_roketota_app/widgets/common/app_icon_button.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
-import 'package:demo_roketota_app/widgets/other/app_loading_overlay.dart';
-import 'package:demo_roketota_app/widgets/other/app_top_bar.dart';
+import 'package:demo_roketota_app/widgets/common/app_loading_overlay.dart';
+import 'package:demo_roketota_app/widgets/common/app_top_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:google_mlkit_selfie_segmentation/google_mlkit_selfie_segmentation.dart';
@@ -62,7 +61,7 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
       await File(_editedFilePath!).copy(widget.filePath);
     }
     final bool savedToGallery =
-        await PhotoGalleryHelper.publishFilterPhoto(widget.filePath);
+        await MediaFileHelper.publishFilterPhoto(widget.filePath);
 
     // Delete file edited from internal storage
     await MediaFileHelper.deleteIfExists(widget.filePath);
@@ -107,7 +106,7 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
   void _handleEditBackPress() {
     final ProImageEditorState? editorState = _editorKey.currentState;
     if (editorState != null && editorState.isSubEditorOpen) {
-      Navigator.of(context).pop();
+      context.pop();
       return;
     }
     _cancelEditMode();
@@ -132,6 +131,11 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
   ProImageEditorCallbacks _createImageEditorCallbacks() {
     return ProImageEditorCallbacks(
       onImageEditingComplete: _saveEditedBytes,
+      onCloseEditor: (editorMode) {
+        setState(() {
+          _isEditing = false;
+        });
+      },
     );
   }
 
@@ -255,10 +259,10 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
 
     await MediaFileHelper.deleteIfExists(widget.filePath);
 
-    await PhotoGalleryHelper.deleteFilterPhotoFromGallery(widget.filePath);
+    await MediaFileHelper.deleteFilterPhotoFromGallery(widget.filePath);
 
     final String? originalPath = widget.originalFilePath ??
-        MediaPathBuilder.originalPathForFilter(widget.filePath);
+        MediaFileHelper.originalPathForFilter(widget.filePath);
     if (originalPath != null) {
       await MediaFileHelper.deleteIfExists(originalPath);
     }
@@ -367,27 +371,6 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
     );
   }
 
-  static const BoxConstraints _topBarIconConstraints = BoxConstraints(
-    minWidth: 40,
-    minHeight: 40,
-  );
-
-  Widget _buildTopBarAction({
-    required VoidCallback? onPressed,
-    required Widget icon,
-    String? tooltip,
-  }) {
-    return IconButton(
-      onPressed: onPressed,
-      icon: icon,
-      color: Colors.white,
-      tooltip: tooltip,
-      visualDensity: VisualDensity.compact,
-      padding: EdgeInsets.zero,
-      constraints: _topBarIconConstraints,
-    );
-  }
-
   Widget _buildTopBar() {
     if(_isEditing) {
       return SizedBox.shrink();
@@ -395,7 +378,7 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
       return AppTopBar(
         title: _isEditing ? Strings.labelEditPhoto : Strings.labelPhotoPreview,
         sideSlotWidth: _isEditing ? 48 : 88,
-        leading: _buildTopBarAction(
+        leading: AppIconButton(
           onPressed: _isDeleting ? null : _onClosePressed,
           icon: const Icon(Icons.close_rounded),
         ),
@@ -404,18 +387,18 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
             : Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _buildTopBarAction(
+            AppIconButton(
               onPressed: _isDeleting ? null : _enterEditMode,
               icon: const Icon(Icons.edit_outlined),
               tooltip: Strings.labelEditPhoto,
             ),
-            _buildTopBarAction(
-              onPressed: pathPhotoSave == null ? null : _toggleView,
-              icon: Icon(
-                isOriginal ? Icons.filter_hdr : Icons.image,
-              ),
-              tooltip: isOriginal ? 'Xem ảnh chân dung' : 'Xem ảnh gốc',
-            ),
+            // AppIconButton(
+            //   onPressed: pathPhotoSave == null ? null : _toggleView,
+            //   icon: Icon(
+            //     isOriginal ? Icons.filter_hdr : Icons.image,
+            //   ),
+            //   tooltip: isOriginal ? 'Xem ảnh chân dung' : 'Xem ảnh gốc',
+            // ),
           ],
         ),
       );

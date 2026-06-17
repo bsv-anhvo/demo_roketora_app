@@ -6,12 +6,13 @@ import 'package:demo_roketota_app/providers/camera/camera_ui_actions_mixin.dart'
 import 'package:demo_roketota_app/providers/camera/camera_ui_state.dart';
 import 'package:demo_roketota_app/providers/camera/video_record_notifier.dart';
 import 'package:demo_roketota_app/providers/camera/video_record_state.dart';
-import 'package:demo_roketota_app/utils/media_path_builder.dart';
+import 'package:demo_roketota_app/utils/constants.dart';
+import 'package:demo_roketota_app/utils/media_file_helper.dart';
 import 'package:demo_roketota_app/utils/strings.dart';
-import 'package:demo_roketota_app/widgets/other/app_loading_overlay.dart';
-import 'package:demo_roketota_app/widgets/camera/camera_capture_button.dart';
+import 'package:demo_roketota_app/widgets/common/app_camera_capture_button.dart';
+import 'package:demo_roketota_app/widgets/common/app_loading_overlay.dart';
 import 'package:demo_roketota_app/widgets/camera/camera_control_panel.dart';
-import 'package:demo_roketota_app/widgets/camera/video_record_elapsed_timer.dart';
+import 'package:demo_roketota_app/widgets/media/video_record_elapsed_timer.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -58,7 +59,7 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
   bool get isPhotoMode => false;
 
   @override
-  String get screenTitle => 'Video';
+  String get screenTitle => Strings.labelRecordVideo;
 
   @override
   Key get cameraWidgetKey =>
@@ -67,7 +68,7 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
   @override
   SaveConfig buildSaveConfig() {
     return SaveConfig.video(
-      pathBuilder: MediaPathBuilder.videoPath,
+      pathBuilder: MediaFileHelper.videoPath,
       videoOptions: buildVideoOptions(),
     );
   }
@@ -264,7 +265,7 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
 
     if (!showRecordFx && processingMessage == null) return null;
 
-    final Duration maxDuration = CameraCaptureButton.videoRecordMaxDuration;
+    final Duration maxDuration = Constants.videoRecordMaxDuration;
     final double progress = isRecording
         ? (_videoState.recordElapsed.inMilliseconds / maxDuration.inMilliseconds)
             .clamp(0.0, 1.0)
@@ -347,11 +348,11 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
           const Gap(8),
           buildCaptureRow(
             state,
-            CameraCaptureButton(
+            AppCameraCaptureButton(
               state: state,
               isPhotoMode: false,
               enabled: true,
-              recordMaxDuration: CameraCaptureButton.videoRecordMaxDuration,
+              recordMaxDuration: Constants.videoRecordMaxDuration,
               onPhotoTap: () async {},
               onQuickVideoStart: () => handleHoldRecordStart(state),
               onQuickVideoStop: () => handleHoldRecordStop(state),

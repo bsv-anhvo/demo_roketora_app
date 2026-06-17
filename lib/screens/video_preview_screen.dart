@@ -2,8 +2,8 @@ import 'package:demo_roketota_app/core/extensions/context_extension.dart';
 import 'package:demo_roketota_app/utils/media_file_helper.dart';
 import 'package:demo_roketota_app/utils/strings.dart';
 import 'package:demo_roketota_app/widgets/media/app_video_preview.dart';
-import 'package:demo_roketota_app/widgets/other/app_loading_overlay.dart';
-import 'package:demo_roketota_app/widgets/other/app_top_bar.dart';
+import 'package:demo_roketota_app/widgets/common/app_loading_overlay.dart';
+import 'package:demo_roketota_app/widgets/common/app_top_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 

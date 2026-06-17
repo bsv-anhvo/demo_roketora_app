@@ -1,6 +1,7 @@
 import 'package:demo_roketota_app/models/camera_settings.dart';
 import 'package:demo_roketota_app/utils/strings.dart';
 import 'package:flutter/material.dart';
+import 'package:gap/gap.dart';
 
 typedef SettingTapCallback<T> = void Function(T value);
 
@@ -55,7 +56,7 @@ class CameraControlPanel extends StatelessWidget {
             value: exposure,
             onChanged: onExposureChanged,
           ),
-          const SizedBox(height: 8),
+          const Gap(8),
         ],
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,

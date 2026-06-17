@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:demo_roketota_app/models/camera_settings.dart';
-import 'package:demo_roketota_app/utils/media_path_builder.dart';
+import 'package:demo_roketota_app/utils/media_file_helper.dart';
 import 'package:demo_roketota_app/utils/photo_filter_helper.dart';
 import 'package:demo_roketota_app/providers/camera/camera_ui_actions_mixin.dart';
 import 'package:demo_roketota_app/providers/camera/camera_ui_state.dart';
@@ -110,7 +110,7 @@ class TakePhotoNotifier extends AutoDisposeNotifier<TakePhotoState>
       if (sensors.isEmpty) return null;
 
       final ({String originalPath, String filterPath}) paths =
-          await MediaPathBuilder.photoPairPaths();
+          await MediaFileHelper.photoPairPaths();
 
       final CaptureRequest captureRequest = SingleCaptureRequest(
         paths.originalPath,

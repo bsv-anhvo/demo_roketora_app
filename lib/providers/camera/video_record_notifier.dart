@@ -6,7 +6,7 @@ import 'package:demo_roketota_app/models/camera_settings.dart';
 import 'package:demo_roketota_app/providers/camera/camera_ui_actions_mixin.dart';
 import 'package:demo_roketota_app/providers/camera/camera_ui_state.dart';
 import 'package:demo_roketota_app/providers/camera/video_record_state.dart';
-import 'package:demo_roketota_app/widgets/camera/camera_capture_button.dart';
+import 'package:demo_roketota_app/utils/constants.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final videoRecordProvider =
@@ -61,9 +61,9 @@ class VideoRecordNotifier extends AutoDisposeNotifier<VideoRecordState>
 
       final Duration next =
           state.recordElapsed + const Duration(milliseconds: 100);
-      if (next >= CameraCaptureButton.videoRecordMaxDuration) {
+      if (next >= Constants.videoRecordMaxDuration) {
         state = state.copyWith(
-          recordElapsed: CameraCaptureButton.videoRecordMaxDuration,
+          recordElapsed: Constants.videoRecordMaxDuration,
         );
         timer.cancel();
         return;

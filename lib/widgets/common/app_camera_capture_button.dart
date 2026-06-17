@@ -1,11 +1,12 @@
 import 'dart:math' as math;
 
 import 'package:camerawesome/camerawesome_plugin.dart';
+import 'package:demo_roketota_app/utils/constants.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-class CameraCaptureButton extends StatefulWidget {
-  const CameraCaptureButton({
+class AppCameraCaptureButton extends StatefulWidget {
+  const AppCameraCaptureButton({
     super.key,
     required this.state,
     required this.isPhotoMode,
@@ -18,9 +19,6 @@ class CameraCaptureButton extends StatefulWidget {
     this.enabled = true,
   });
 
-  static const Duration quickRecordMaxDuration = Duration(seconds: 10);
-  static const Duration videoRecordMaxDuration = Duration(seconds: 20);
-
   final CameraState state;
   final bool isPhotoMode;
   final Future<void> Function() onPhotoTap;
@@ -29,32 +27,29 @@ class CameraCaptureButton extends StatefulWidget {
   final VoidCallback? onVideoRecordStop;
   final ValueChanged<bool>? onHoldRecordingChanged;
 
-  /// When set in video mode, draws a countdown ring and auto-stops recording.
+  // When set in video mode, draws a countdown ring and auto-stops recording.
   final Duration? recordMaxDuration;
   final bool enabled;
 
   @override
-  State<CameraCaptureButton> createState() => _CameraCaptureButtonState();
+  State<AppCameraCaptureButton> createState() => _AppCameraCaptureButtonState();
 }
 
-class _CameraCaptureButtonState extends State<CameraCaptureButton>
+class _AppCameraCaptureButtonState extends State<AppCameraCaptureButton>
     with TickerProviderStateMixin {
   late AnimationController _scaleController;
   late AnimationController _progressController;
   bool _isQuickRecording = false;
   bool _wasLongPress = false;
 
-  static const double _buttonSize = 80;
-  static const double _ringSize = 96;
-
   @override
   void initState() {
     super.initState();
     _scaleController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 100),
-      lowerBound: 0.0,
-      upperBound: 0.12,
+        vsync: this,
+        duration: const Duration(milliseconds: 100),
+        lowerBound: 0.0,
+        upperBound: 0.12,
     );
     _progressController = AnimationController(vsync: this)
       ..addStatusListener(_onProgressStatusChanged);
@@ -81,8 +76,7 @@ class _CameraCaptureButtonState extends State<CameraCaptureButton>
   bool get _showsRecordProgressRing {
     if (_isQuickRecording) return true;
     if (widget.isPhotoMode || widget.recordMaxDuration == null) return false;
-    return widget.state is VideoRecordingCameraState ||
-        _progressController.isAnimating;
+    return widget.state is VideoRecordingCameraState || _progressController.isAnimating;
   }
 
   bool get _supportsHoldRecord =>
@@ -104,8 +98,8 @@ class _CameraCaptureButtonState extends State<CameraCaptureButton>
           ? (_) => _onLongPressEnd()
           : null,
       child: SizedBox(
-        height: _ringSize,
-        width: _ringSize,
+        height: Constants.ringSize,
+        width: Constants.ringSize,
         child: Stack(
           alignment: Alignment.center,
           children: [
@@ -114,7 +108,7 @@ class _CameraCaptureButtonState extends State<CameraCaptureButton>
                 animation: _progressController,
                 builder: (context, _) {
                   return CustomPaint(
-                    size: const Size(_ringSize, _ringSize),
+                    size: const Size(Constants.ringSize, Constants.ringSize),
                     painter: _ProgressRingPainter(
                       progress: _progressController.value,
                     ),
@@ -124,8 +118,8 @@ class _CameraCaptureButtonState extends State<CameraCaptureButton>
             Transform.scale(
               scale: scale,
               child: SizedBox(
-                height: _buttonSize,
-                width: _buttonSize,
+                height: Constants.buttonSize,
+                width: Constants.buttonSize,
                 child: CustomPaint(
                   painter: _CaptureButtonPainter(
                     isVideoMode: !widget.isPhotoMode,
@@ -181,9 +175,9 @@ class _CameraCaptureButtonState extends State<CameraCaptureButton>
     widget.onHoldRecordingChanged?.call(true);
     _progressController
       ..duration = widget.isPhotoMode
-          ? CameraCaptureButton.quickRecordMaxDuration
+          ? Constants.quickRecordMaxDuration
           : (widget.recordMaxDuration ??
-              CameraCaptureButton.quickRecordMaxDuration)
+          Constants.quickRecordMaxDuration)
       ..forward(from: 0);
     widget.onQuickVideoStart!();
   }

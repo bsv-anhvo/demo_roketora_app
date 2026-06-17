@@ -10,13 +10,11 @@ import 'package:demo_roketota_app/screens/photo_preview_screen.dart';
 import 'package:demo_roketota_app/screens/video_preview_screen.dart';
 import 'package:demo_roketota_app/utils/camera_focus_helper.dart';
 import 'package:demo_roketota_app/utils/device_requirements.dart';
-import 'package:demo_roketota_app/utils/requirement_ui.dart';
 import 'package:demo_roketota_app/utils/strings.dart';
 import 'package:demo_roketota_app/widgets/camera/aspect_ratio_preview_overlay.dart';
 import 'package:demo_roketota_app/widgets/camera/camera_filter_strip.dart';
-import 'package:demo_roketota_app/widgets/camera/camera_settings_toggle_button.dart';
 import 'package:demo_roketota_app/widgets/camera/ios_style_zoom_selector.dart';
-import 'package:demo_roketota_app/widgets/other/app_top_bar.dart';
+import 'package:demo_roketota_app/widgets/common/app_top_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -65,7 +63,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
     if (!mounted) return;
 
     if (cameraStatus != CameraRequirementStatus.ready) {
-      await RequirementUi.showCameraIssue(context, cameraStatus);
+      await DeviceRequirements.showCameraIssue(context, cameraStatus);
       if (mounted) context.pop();
       return;
     }
@@ -76,7 +74,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
     if (!mounted) return;
 
     if (locationStatus != LocationRequirementStatus.ready) {
-      await RequirementUi.showLocationIssue(context, locationStatus);
+      await DeviceRequirements.showLocationIssue(context, locationStatus);
       if (mounted) context.pop();
       return;
     }
@@ -166,6 +164,11 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
   }) async {
     if (cameraUi.isOpeningPreview || !mounted) return;
     _stopCamera();
+
+    if(cameraUi.showControlPanel) {
+      cameraHost.toggleControlPanel();
+    }
+
     cameraHost.setOpeningPreview(true);
 
     final bool? saved = await context.pushFullscreen<bool>(
@@ -211,15 +214,8 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
   Widget buildTopBar() {
     return AppTopBar(
       title: screenTitle,
-      leading: IconButton(
-        onPressed: () => context.pop(),
-        icon: const Icon(Icons.arrow_back_ios_new_rounded),
-        color: Colors.white,
-      ),
-      trailing: CameraSettingsToggleButton(
-        isActive: cameraUi.showControlPanel,
-        onTap: cameraHost.toggleControlPanel,
-      ),
+      leading: _buildIconBackWidget(),
+      trailing: _buildIconSettingWidget(),
     );
   }
 
@@ -280,6 +276,26 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
   Widget _buildPermissionGate() {
     return const Center(
       child: CircularProgressIndicator(color: Colors.white),
+    );
+  }
+
+  Widget _buildIconBackWidget() {
+    return IconButton(
+      onPressed: () => context.pop(),
+      icon: const Icon(Icons.arrow_back_ios_new_rounded),
+      color: Colors.white,
+    );
+  }
+
+  Widget _buildIconSettingWidget() {
+    bool isActive = cameraUi.showControlPanel;
+
+    return IconButton(
+      onPressed: cameraHost.toggleControlPanel,
+      icon: Icon(
+        isActive ? Icons.tune_rounded : Icons.tune_outlined,
+        color: isActive ? Colors.white : Colors.white70,
+      ),
     );
   }
 

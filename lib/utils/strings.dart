@@ -49,4 +49,5 @@ class Strings {
   static String msgDeleted = 'Deleted';
   static String msgVideoSaved = 'Video saved';
   static String msgPhotoSaved = 'Photo saved';
+  static String msgDecodeImageFailed = 'Cannot decode image: %s';
 }
