@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'dart:typed_data';
+
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:camerawesome/pigeon.dart';
 import 'package:demo_roketota_app/bases/base_camera_screen.dart';
@@ -112,14 +114,14 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
   Future<void> _capturePhoto(PhotoCameraState photoState) async {
     _setProcessingMessage(Strings.msgCapturing);
     try {
-      final ({String filterPath, String originalPath})? result =
+      final ({Uint8List filterBytes, Uint8List originalBytes})? result =
           await _notifier.captureDualPhoto(photoState);
       if (!mounted) return;
       _setProcessingMessage(null);
       if (result != null) {
         await openMediaPreview(
-          filePath: result.filterPath,
-          originalFilePath: result.originalPath,
+          filterBytes: result.filterBytes,
+          originalBytes: result.originalBytes,
           isVideo: false,
         );
       }

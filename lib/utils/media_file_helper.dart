@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:flutter/foundation.dart';
@@ -20,30 +21,91 @@ class MediaFileHelper {
     return Directory('${baseDir.path}/roketora_media').create(recursive: true);
   }
 
-  static Future<({String originalPath, String filterPath})> photoPairPaths() async {
-    final Directory mediaDir = await _mediaDirectory();
-    final String  timestamp = DateTime.now().millisecondsSinceEpoch.toString();
-    return (
-      originalPath: '${mediaDir.path}/photo_original_$timestamp.jpg',
-      filterPath: '${mediaDir.path}/photo_$timestamp.jpg',
-    );
-  }
-
+  /// Scratch path required by camerawesome for hardware-button capture only.
+  /// Dual capture reads bytes and deletes the file immediately.
   static Future<CaptureRequest> photoPath(List<Sensor> sensors) async {
-    final String filterPath = (await photoPairPaths()).filterPath;
+    final Directory scratchDir = await getTemporaryDirectory();
+    final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+    final String scratchPath = '${scratchDir.path}/photo_$timestamp.jpg';
 
-    if(sensors.length == 1) {
-      return SingleCaptureRequest(filterPath, sensors.first);
+    if (sensors.length == 1) {
+      return SingleCaptureRequest(scratchPath, sensors.first);
     }
 
-    final Directory mediaDir = await _mediaDirectory();
-    final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
-
     return MultipleCaptureRequest({
-      for (final sensor in sensors)
+      for (final Sensor sensor in sensors)
         sensor:
-            '${mediaDir.path}/${sensor.position == SensorPosition.front ? 'front' : 'back'}_$timestamp.jpg',
+            '${scratchDir.path}/${sensor.position == SensorPosition.front ? 'front' : 'back'}_$timestamp.jpg',
     });
+  }
+
+  /// Returns `true` when the image was saved to the gallery.
+  static Future<bool> publishFilterPhotoBytes(
+    Uint8List bytes, {
+    String? name,
+  }) async {
+    try {
+      final String photoName =
+          name ?? 'photo_${DateTime.now().millisecondsSinceEpoch}';
+      await Gal.putImageBytes(bytes, album: 'Roketora', name: photoName);
+      return true;
+    } on GalException catch (e) {
+      debugPrint('Gallery publish failed: ${e.type.message}');
+      return false;
+    } on MissingPluginException catch (e) {
+      debugPrint(
+        'Gal plugin is not linked ($e). '
+            'Stop the app completely, then run: flutter clean && flutter pub get && flutter run',
+      );
+      return false;
+    } on PlatformException catch (e) {
+      debugPrint('Gallery publish platform error: $e');
+      return false;
+    } catch (e, stackTrace) {
+      debugPrint('Gallery publish failed: $e\n$stackTrace');
+      return false;
+    }
+  }
+
+  /// Persists the unfiltered original to app documents. Only call on Save.
+  static Future<String> saveOriginalPhotoBytes(
+    Uint8List bytes, {
+    required String timestamp,
+  }) async {
+    final Directory mediaDir = await _mediaDirectory();
+    final String path = '${mediaDir.path}/photo_original_$timestamp.jpg';
+    await File(path).writeAsBytes(bytes);
+    return path;
+  }
+
+  /// Saves filter photo to Gallery and original photo to internal storage.
+  static Future<bool> saveConfirmedPhoto({
+    required Uint8List filterBytes,
+    required Uint8List originalBytes,
+  }) async {
+    final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+    String? originalPath;
+
+    try {
+      originalPath = await saveOriginalPhotoBytes(
+        originalBytes,
+        timestamp: timestamp,
+      );
+      final bool gallerySaved = await publishFilterPhotoBytes(
+        filterBytes,
+        name: 'photo_$timestamp',
+      );
+      if (!gallerySaved) {
+        await deleteIfExists(originalPath);
+      }
+      return gallerySaved;
+    } catch (e, stackTrace) {
+      debugPrint('Save confirmed photo failed: $e\n$stackTrace');
+      if (originalPath != null) {
+        await deleteIfExists(originalPath);
+      }
+      return false;
+    }
   }
 
   static String? originalPathForFilter(String filterPath) {

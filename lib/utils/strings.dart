@@ -35,6 +35,7 @@ class Strings {
   static String msgCapturing = 'Capturing...';
   static String msgProcessingVideo = 'Processing video...';
   static String msgDeleting = 'Deleting...';
+  static String msgSaving = 'Saving...';
   static String msgGPSIsTurnedOff = 'Turn on location services to use this app.';
   static String msgLocationPermissionRequired = 'Allow location access to continue.';
   static String msgLocationAccessWasDenied = 'Location access was denied. Open Settings to allow it.';
