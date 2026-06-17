@@ -13,6 +13,7 @@ class VideoPreviewScreen extends StatefulWidget {
     required this.filePath,
   });
 
+  /// Stamp video path under cache/roketora_media_stamp.
   final String filePath;
 
   @override
@@ -21,14 +22,33 @@ class VideoPreviewScreen extends StatefulWidget {
 
 class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
   bool _isDeleting = false;
+  bool _isSaving = false;
 
   Future<void> _onSave() async {
+    if (_isSaving || _isDeleting) return;
+    setState(() => _isSaving = true);
+
+    final bool saved =
+        await MediaFileHelper.saveConfirmedVideo(widget.filePath);
+
     if (!mounted) return;
+    setState(() => _isSaving = false);
+
+    if (!saved) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not save video. Please try again.'),
+          duration: Duration(seconds: 4),
+        ),
+      );
+      return;
+    }
+
     context.pop(true);
   }
 
   Future<void> _onDelete() async {
-    if (_isDeleting) return;
+    if (_isDeleting || _isSaving) return;
     setState(() => _isDeleting = true);
     await MediaFileHelper.deleteIfExists(widget.filePath);
     if (!mounted) return;
@@ -36,7 +56,7 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
   }
 
   Future<void> _onClosePressed() async {
-    if (_isDeleting) return;
+    if (_isDeleting || _isSaving) return;
 
     final bool? shouldDelete = await showDialog<bool>(
       context: context,
@@ -66,61 +86,76 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          SafeArea(
-            child: Column(
-              children: [
-                AppTopBar(
-                  title: Strings.labelVideoPreview,
-                  leading: IconButton(
-                    onPressed: _isDeleting ? null : _onClosePressed,
-                    icon: const Icon(Icons.close_rounded),
-                    color: Colors.white,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, Object? result) {
+        if (didPop) return;
+        _onClosePressed();
+      },
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: Stack(
+          children: [
+            SafeArea(
+              child: Column(
+                children: [
+                  AppTopBar(
+                    title: Strings.labelVideoPreview,
+                    leading: IconButton(
+                      onPressed: _isDeleting || _isSaving
+                          ? null
+                          : _onClosePressed,
+                      icon: const Icon(Icons.close_rounded),
+                      color: Colors.white,
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: AppVideoPreview(videoPath: widget.filePath),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: _isDeleting ? null : _onDelete,
-                          icon: const Icon(Icons.delete_outline_rounded),
-                          label: Text(Strings.labelActionDelete),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.redAccent,
-                            side: const BorderSide(color: Colors.redAccent),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
+                  Expanded(
+                    child: AppVideoPreview(videoPath: widget.filePath),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _isDeleting || _isSaving
+                                ? null
+                                : _onDelete,
+                            icon: const Icon(Icons.delete_outline_rounded),
+                            label: Text(Strings.labelActionDelete),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.redAccent,
+                              side: const BorderSide(color: Colors.redAccent),
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 14),
+                            ),
                           ),
                         ),
-                      ),
-                      const Gap(16),
-                      Expanded(
-                        child: FilledButton.icon(
-                          onPressed: _isDeleting ? null : _onSave,
-                          icon: const Icon(Icons.check_rounded),
-                          label: Text(Strings.labelActionSave),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFF1E88E5),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
+                        const Gap(16),
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed:
+                                _isDeleting || _isSaving ? null : _onSave,
+                            icon: const Icon(Icons.check_rounded),
+                            label: Text(Strings.labelActionSave),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFF1E88E5),
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 14),
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          if (_isDeleting)
-            AppLoadingOverlay(message: Strings.msgDeleting),
-        ],
+            if (_isDeleting)
+              AppLoadingOverlay(message: Strings.msgDeleting),
+            if (_isSaving) AppLoadingOverlay(message: Strings.msgSaving),
+          ],
+        ),
       ),
     );
   }

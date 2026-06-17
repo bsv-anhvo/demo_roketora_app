@@ -21,6 +21,26 @@ class MediaFileHelper {
     return Directory('${baseDir.path}/roketora_media').create(recursive: true);
   }
 
+  static Future<Directory> _videoStampDirectory() async {
+    final Directory cacheDir = await getApplicationCacheDirectory();
+    return Directory('${cacheDir.path}/roketora_media_stamp')
+        .create(recursive: true);
+  }
+
+  /// Removes leftover stamp videos (e.g. after kill app on preview).
+  static Future<void> clearVideoStampDirectory() async {
+    try {
+      final Directory dir = await _videoStampDirectory();
+      if (!await dir.exists()) return;
+
+      await for (final FileSystemEntity entity in dir.list()) {
+        await entity.delete(recursive: true);
+      }
+    } catch (e, stackTrace) {
+      debugPrint('Clear video stamp directory failed: $e\n$stackTrace');
+    }
+  }
+
   /// Scratch path required by camerawesome for hardware-button capture only.
   /// Dual capture reads bytes and deletes the file immediately.
   static Future<CaptureRequest> photoPath(List<Sensor> sensors) async {
@@ -118,19 +138,45 @@ class MediaFileHelper {
   }
 
   static Future<CaptureRequest> videoPath(List<Sensor> sensors) async {
-    final Directory mediaDir = await _mediaDirectory();
+    final Directory stampDir = await _videoStampDirectory();
     final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
 
     if (sensors.length == 1) {
-      final String filePath = '${mediaDir.path}/video_$timestamp.mp4';
+      final String filePath = '${stampDir.path}/video_$timestamp.mp4';
       return SingleCaptureRequest(filePath, sensors.first);
     }
 
     return MultipleCaptureRequest({
-      for (final sensor in sensors)
+      for (final Sensor sensor in sensors)
         sensor:
-        '${mediaDir.path}/${sensor.position == SensorPosition.front ? 'front' : 'back'}_$timestamp.mp4',
+            '${stampDir.path}/${sensor.position == SensorPosition.front ? 'front' : 'back'}_$timestamp.mp4',
     });
+  }
+
+  /// Moves stamp video into [roketora_media] and removes the stamp file.
+  static Future<bool> saveConfirmedVideo(String stampPath) async {
+    try {
+      final File source = File(stampPath);
+      if (!await source.exists()) {
+        debugPrint('Save video skipped: stamp file missing at $stampPath');
+        return false;
+      }
+
+      final Directory mediaDir = await _mediaDirectory();
+      final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+      final String destPath = '${mediaDir.path}/video_$timestamp.mp4';
+
+      try {
+        await source.rename(destPath);
+      } catch (_) {
+        await source.copy(destPath);
+        await source.delete();
+      }
+      return true;
+    } catch (e, stackTrace) {
+      debugPrint('Save confirmed video failed: $e\n$stackTrace');
+      return false;
+    }
   }
 
   /// ↧ Publishes filter photos to the device gallery (public).

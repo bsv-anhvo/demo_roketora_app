@@ -2,6 +2,7 @@ import 'package:demo_roketota_app/core/extensions/context_extension.dart';
 import 'package:demo_roketota_app/screens/take_photo_screen.dart';
 import 'package:demo_roketota_app/screens/video_record_screen.dart';
 import 'package:demo_roketota_app/utils/device_requirements.dart';
+import 'package:demo_roketota_app/utils/media_file_helper.dart';
 import 'package:demo_roketota_app/utils/strings.dart';
 import 'package:demo_roketota_app/widgets/common/app_action_button.dart';
 import 'package:flutter/material.dart';
@@ -36,11 +37,15 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _openTakePhoto(BuildContext context) {
+  Future<void> _openTakePhoto(BuildContext context) async {
+    await MediaFileHelper.clearVideoStampDirectory();
+    if (!context.mounted) return;
     context.push(const TakePhotoScreen());
   }
 
-  void _openVideoRecord(BuildContext context) {
+  Future<void> _openVideoRecord(BuildContext context) async {
+    await MediaFileHelper.clearVideoStampDirectory();
+    if (!context.mounted) return;
     context.push(const VideoRecordScreen());
   }
 
