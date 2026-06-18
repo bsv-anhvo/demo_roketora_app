@@ -12,10 +12,12 @@ class VideoPreviewScreen extends StatefulWidget {
   const VideoPreviewScreen({
     super.key,
     required this.filePath,
+    this.originalFilePath,
   });
 
-  /// Stamp video path under cache/roketora_media_stamp.
+  /// Edited stamp path under cache/roketora_media_stamp.
   final String filePath;
+  final String? originalFilePath;
 
   @override
   State<VideoPreviewScreen> createState() => _VideoPreviewScreenState();
@@ -25,18 +27,34 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
   bool _isDeleting = false;
   bool _isSaving = false;
 
+  String get _editedStampPath => widget.filePath;
+
+  String? get _originalStampPath =>
+      widget.originalFilePath ??
+      MediaFileHelper.originalPathForEdited(_editedStampPath);
+
   Future<void> _onSave() async {
     if (_isSaving || _isDeleting) return;
     setState(() => _isSaving = true);
 
-    final bool saved =
-        await MediaFileHelper.saveConfirmedVideo(widget.filePath);
+    final String? originalPath = _originalStampPath;
+    if (originalPath == null) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      Strings.msgOriginalFileIsMissing.showSnackBar(context);
+      return;
+    }
+
+    final bool saved = await MediaFileHelper.saveConfirmedVideo(
+      editedStampPath: _editedStampPath,
+      originalStampPath: originalPath,
+    );
 
     if (!mounted) return;
     setState(() => _isSaving = false);
 
     if (!saved) {
-      Strings.msgCouldNotSaveVideo.showSnackBar(context);
+      Strings.msgCouldNotSaveToGallery.showSnackBar(context);
       return;
     }
 
@@ -46,7 +64,12 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
   Future<void> _onDelete() async {
     if (_isDeleting || _isSaving) return;
     setState(() => _isDeleting = true);
-    await MediaFileHelper.deleteIfExists(widget.filePath);
+
+    await MediaFileHelper.deleteVideoStampPair(
+      editedStampPath: _editedStampPath,
+      originalStampPath: _originalStampPath,
+    );
+
     if (!mounted) return;
     context.pop(false);
   }
@@ -82,6 +105,8 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final double bottomInset = MediaQuery.paddingOf(context).bottom;
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (bool didPop, Object? result) {
@@ -90,10 +115,11 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
       },
       child: Scaffold(
         backgroundColor: Colors.black,
-        body: Stack(
-          children: [
-            SafeArea(
-              child: Column(
+        body: SafeArea(
+          bottom: false,
+          child: Stack(
+            children: [
+              Column(
                 children: [
                   AppTopBar(
                     title: Strings.labelVideoPreview,
@@ -106,17 +132,16 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
                     ),
                   ),
                   Expanded(
-                    child: AppVideoPreview(videoPath: widget.filePath),
+                    child: AppVideoPreview(videoPath: _editedStampPath),
                   ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+                    padding: EdgeInsets.fromLTRB(24, 8, 24, 12 + bottomInset),
                     child: Row(
                       children: [
                         Expanded(
                           child: OutlinedButton.icon(
-                            onPressed: _isDeleting || _isSaving
-                                ? null
-                                : _onDelete,
+                            onPressed:
+                                _isDeleting || _isSaving ? null : _onDelete,
                             icon: const Icon(Icons.delete_outline_rounded),
                             label: Text(Strings.labelActionDelete),
                             style: OutlinedButton.styleFrom(
@@ -146,11 +171,11 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
                   ),
                 ],
               ),
-            ),
-            if (_isDeleting)
-              AppLoadingOverlay(message: Strings.msgDeleting),
-            if (_isSaving) AppLoadingOverlay(message: Strings.msgSaving),
-          ],
+              if (_isDeleting)
+                AppLoadingOverlay(message: Strings.msgDeleting),
+              if (_isSaving) AppLoadingOverlay(message: Strings.msgSaving),
+            ],
+          ),
         ),
       ),
     );

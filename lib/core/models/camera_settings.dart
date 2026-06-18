@@ -107,3 +107,6 @@ const List<DeviceOrientation> kCameraOrientations = [
   DeviceOrientation.landscapeLeft,
   DeviceOrientation.landscapeRight,
 ];
+
+/// Matches native FHD/HD video presets so preview and recording share the same crop.
+const CameraAspectRatios kVideoRecordAspectRatio = CameraAspectRatios.ratio_16_9;

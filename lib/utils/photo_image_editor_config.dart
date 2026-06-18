@@ -1,12 +1,15 @@
+import 'package:demo_roketota_app/utils/languages/photo_image_editor_i18n.dart';
 import 'package:flutter/material.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
 class PhotoImageEditorConfig {
   const PhotoImageEditorConfig._();
 
-  static ProImageEditorConfigs create() {
+  static ProImageEditorConfigs create(Locale locale) {
     return ProImageEditorConfigs(
       designMode: ImageEditorDesignMode.material,
+      i18n: PhotoImageEditorI18n.forLocale(locale),
+      filterEditor: FilterEditorConfigs(),
       theme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,

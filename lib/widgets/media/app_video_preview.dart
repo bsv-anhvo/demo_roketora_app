@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:demo_roketota_app/utils/strings.dart';
 import 'package:demo_roketota_app/widgets/media/video_transport_controls.dart';
 import 'package:flutter/material.dart';
-import 'package:sprintf/sprintf.dart';
 import 'package:video_player/video_player.dart';
 
 class AppVideoPreview extends StatefulWidget {
@@ -50,7 +49,7 @@ class _AppVideoPreviewState extends State<AppVideoPreview> {
       await controller.dispose();
       if (!mounted) return;
       setState(
-        () => _errorMessage = sprintf(Strings.msgUnableToPlayVideo, [error]),
+        () => _errorMessage = Strings.msgUnableToPlayVideo('$error'),
       );
     }
   }
@@ -136,11 +135,6 @@ class _AppVideoPreviewState extends State<AppVideoPreview> {
       );
     }
 
-    final Size videoSize = controller.value.size;
-    final double aspectRatio = videoSize.width > 0 && videoSize.height > 0
-        ? videoSize.width / videoSize.height
-        : 9 / 16;
-
     final Duration position = controller.value.position;
     final Duration duration = controller.value.duration;
     final int durationMs = duration.inMilliseconds.clamp(1, 1 << 31);
@@ -148,22 +142,16 @@ class _AppVideoPreviewState extends State<AppVideoPreview> {
 
     return Column(
       children: [
-        Expanded(
-          child: Center(
-            child: AspectRatio(
-              aspectRatio: aspectRatio,
-              child: VideoPlayer(controller),
-            ),
-          ),
-        ),
+        Expanded(child: _buildViewport(controller)),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                sprintf(
-                  Strings.labelTimeRecord,
-                  [_formatDuration(position), _formatDuration(duration)],
+                Strings.labelTimeRecord(
+                  _formatDuration(position),
+                  _formatDuration(duration),
                 ),
                 style: const TextStyle(
                   color: Colors.white,
@@ -196,6 +184,32 @@ class _AppVideoPreviewState extends State<AppVideoPreview> {
           ),
         ),
       ],
+    );
+  }
+
+  /// Mirrors [CameraPreviewFit.contain] + [Alignment.topCenter] from the record screen.
+  Widget _buildViewport(VideoPlayerController controller) {
+    final Size nativeSize = controller.value.size;
+    if (nativeSize.width == 0 || nativeSize.height == 0) {
+      return const SizedBox.shrink();
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SizedBox(
+          width: constraints.maxWidth,
+          height: constraints.maxHeight,
+          child: FittedBox(
+            fit: BoxFit.contain,
+            alignment: Alignment.topCenter,
+            child: SizedBox(
+              width: nativeSize.width,
+              height: nativeSize.height,
+              child: VideoPlayer(controller),
+            ),
+          ),
+        );
+      },
     );
   }
 }

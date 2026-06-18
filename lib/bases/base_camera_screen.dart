@@ -9,6 +9,8 @@ import 'package:demo_roketota_app/providers/camera/camera_ui_state.dart';
 import 'package:demo_roketota_app/screens/photo_preview_screen.dart';
 import 'package:demo_roketota_app/screens/video_preview_screen.dart';
 import 'package:demo_roketota_app/utils/camera_focus_helper.dart';
+import 'package:demo_roketota_app/utils/camera_preset_filters.dart';
+import 'package:demo_roketota_app/providers/locale_provider.dart';
 import 'package:demo_roketota_app/utils/device_requirements.dart';
 import 'package:demo_roketota_app/utils/strings.dart';
 import 'package:demo_roketota_app/widgets/camera/aspect_ratio_preview_overlay.dart';
@@ -159,7 +161,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
 
   Future<void> openMediaPreview({
     required String filePath,
-    String? originalFilePath,
+    required String originalFilePath,
     required bool isVideo,
   }) async {
     if (cameraUi.isOpeningPreview || !mounted) return;
@@ -173,7 +175,10 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
 
     final bool? saved = await context.pushFullscreen<bool>(
       isVideo
-          ? VideoPreviewScreen(filePath: filePath)
+          ? VideoPreviewScreen(
+              filePath: filePath,
+              originalFilePath: originalFilePath,
+            )
           : PhotoPreviewScreen(
               filePath: filePath,
               originalFilePath: originalFilePath,
@@ -227,11 +232,13 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
   }
 
   Widget buildFilterStrip(CameraState state) {
+    ref.watch(localeProvider);
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: CameraFilterStrip(
         state: state,
-        filters: awesomePresetFiltersList,
+        filters: cameraPresetFilters,
       ),
     );
   }
@@ -337,7 +344,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
                         theme: AwesomeTheme(
                           bottomActionsBackgroundColor: Colors.transparent,
                         ),
-                        availableFilters: awesomePresetFiltersList,
+                        availableFilters: cameraPresetFilters,
                         onPreviewScaleBuilder: (state) => OnPreviewScale(
                           onScale: (normalized) {
                             final double display = cameraUi.zoomRange

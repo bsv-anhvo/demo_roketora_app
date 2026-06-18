@@ -1,4 +1,5 @@
 import 'package:camerawesome/camerawesome_plugin.dart';
+import 'package:demo_roketota_app/utils/languages/camera_filter_i18n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -52,6 +53,10 @@ class _CameraFilterStripState extends State<CameraFilterStrip> {
 
               return _FilterPreviewTile(
                 filter: filter,
+                label: CameraFilterI18n.displayName(
+                  filter,
+                  Localizations.localeOf(context),
+                ),
                 textureId: _textureId,
                 isSelected: isSelected,
                 onTap: () {
@@ -70,12 +75,14 @@ class _CameraFilterStripState extends State<CameraFilterStrip> {
 class _FilterPreviewTile extends StatelessWidget {
   const _FilterPreviewTile({
     required this.filter,
+    required this.label,
     required this.textureId,
     required this.isSelected,
     required this.onTap,
   });
 
   final AwesomeFilter filter;
+  final String label;
   final int? textureId;
   final bool isSelected;
   final VoidCallback onTap;
@@ -112,7 +119,7 @@ class _FilterPreviewTile extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              filter.name,
+              label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,

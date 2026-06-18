@@ -154,7 +154,7 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
     return ProImageEditor.file(
       File(sourcePath),
       key: _editorKey,
-      configs: PhotoImageEditorConfig.create(),
+      configs: PhotoImageEditorConfig.create(Localizations.localeOf(context)),
       callbacks: _imageEditorCallbacks,
     );
   }

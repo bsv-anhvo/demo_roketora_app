@@ -15,7 +15,12 @@
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>This app needs location access to tag photos and videos with GPS coordinates.</string>
 	<key>CFBundleDevelopmentRegion</key>
-	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<string>en</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>ja</string>
+	</array>
 	<key>CFBundleDisplayName</key>
 	<string>Demo Roketota App</string>
 	<key>CFBundleExecutable</key>

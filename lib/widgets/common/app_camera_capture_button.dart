@@ -15,6 +15,7 @@ class AppCameraCaptureButton extends StatefulWidget {
     this.onQuickVideoStop,
     this.onVideoRecordStop,
     this.onHoldRecordingChanged,
+    this.onBeforeVideoRecordStart,
     this.recordMaxDuration,
     this.enabled = true,
   });
@@ -26,6 +27,8 @@ class AppCameraCaptureButton extends StatefulWidget {
   final VoidCallback? onQuickVideoStop;
   final VoidCallback? onVideoRecordStop;
   final ValueChanged<bool>? onHoldRecordingChanged;
+  final Future<void> Function(VideoCameraState videoState)?
+      onBeforeVideoRecordStart;
 
   // When set in video mode, draws a countdown ring and auto-stops recording.
   final Duration? recordMaxDuration;
@@ -149,8 +152,12 @@ class _AppCameraCaptureButtonState extends State<AppCameraCaptureButton>
     }
 
     widget.state.when(
-      onVideoMode: (videoState) {
-        videoState.startRecording();
+      onVideoMode: (videoState) async {
+        if (widget.onBeforeVideoRecordStart != null) {
+          await widget.onBeforeVideoRecordStart!(videoState);
+        } else {
+          await videoState.startRecording();
+        }
         _startVideoRecordProgress();
       },
       onVideoRecordingMode: (recordingState) {

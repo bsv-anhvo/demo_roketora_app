@@ -17,6 +17,8 @@ final videoRecordProvider =
 class VideoRecordNotifier extends AutoDisposeNotifier<VideoRecordState>
     with CameraUiActions<VideoRecordState> {
   Timer? _recordTimer;
+  AwesomeFilter? _recordingFilter;
+  AwesomeFilter? _filterToRestore;
 
   @override
   CameraUiState get cameraUi => state.camera;
@@ -44,6 +46,46 @@ class VideoRecordNotifier extends AutoDisposeNotifier<VideoRecordState>
 
   void onCameraReady(CameraState cameraState) {
     onCameraReadyBase(cameraState);
+    Future.microtask(() => _restorePendingFilter(cameraState));
+  }
+
+  AwesomeFilter recordingFilterForProcessing() =>
+      _recordingFilter ?? AwesomeFilter.None;
+
+  Future<void> prepareAndStartRecording(VideoCameraState videoState) async {
+    final AwesomeFilter selected = videoState.filter;
+    _recordingFilter = selected;
+    _filterToRestore = selected;
+    if (selected.id != AwesomeFilter.None.id) {
+      await videoState.setFilter(AwesomeFilter.None);
+    }
+    await videoState.startRecording();
+  }
+
+  void clearRecordingFilter() {
+    _recordingFilter = null;
+  }
+
+  Future<void> restorePendingFilter(CameraState state) =>
+      _restorePendingFilter(state);
+
+  Future<void> _restorePendingFilter(CameraState state) async {
+    final AwesomeFilter? filter = _filterToRestore;
+    if (filter == null || filter.id == AwesomeFilter.None.id) return;
+
+    await state.when(
+      onVideoMode: (VideoCameraState videoState) => videoState.setFilter(filter),
+      onPhotoMode: (_) async {},
+      onVideoRecordingMode: (VideoRecordingCameraState videoState) =>
+          videoState.setFilter(filter),
+      onPreviewMode: (_) async {},
+      onAnalysisOnlyMode: (_) async {},
+    );
+    _filterToRestore = null;
+  }
+
+  void clearPendingFilterRestore() {
+    _filterToRestore = null;
   }
 
   void startRecordTimer({required bool Function() isMounted}) {

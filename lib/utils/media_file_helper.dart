@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:camerawesome/camerawesome_plugin.dart';
+import 'package:demo_roketota_app/utils/video_filter_helper.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:gal/gal.dart';
@@ -128,49 +129,151 @@ class MediaFileHelper {
     return '$dir/photo_original_${result.group(1)}.jpg';
   }
 
-  static Future<CaptureRequest> videoPath(List<Sensor> sensors) async {
+  static Future<({String originalPath, String editedPath})> videoPairPaths() async {
     final Directory stampDir = await _mediaStampDirectory();
     final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+    return (
+      originalPath: '${stampDir.path}/video_original_$timestamp.mp4',
+      editedPath: '${stampDir.path}/video_$timestamp.mp4',
+    );
+  }
+
+  static String? editedPathForOriginal(String originalPath) {
+    final RegExp match = RegExp(r'video_original_(\d+)\.mp4$');
+    final RegExpMatch? result = match.firstMatch(originalPath);
+    if (result == null) return null;
+
+    final String dir = originalPath.substring(0, originalPath.lastIndexOf('/'));
+    return '$dir/video_${result.group(1)}.mp4';
+  }
+
+  static String? originalPathForEdited(String editedPath) {
+    final RegExp match = RegExp(r'video_(\d+)\.mp4$');
+    final RegExpMatch? result = match.firstMatch(editedPath);
+    if (result == null) return null;
+
+    final String dir = editedPath.substring(0, editedPath.lastIndexOf('/'));
+    return '$dir/video_original_${result.group(1)}.mp4';
+  }
+
+  /// Copies original stamp, then bakes [filter] into the edited stamp file.
+  static Future<String?> createEditedVideoStamp(
+    String originalStampPath,
+    AwesomeFilter filter, {
+    int? fallbackFps,
+  }) async {
+    final String? editedPath = editedPathForOriginal(originalStampPath);
+    if (editedPath == null) return null;
+
+    await File(originalStampPath).copy(editedPath);
+    if (filter.id != AwesomeFilter.None.id) {
+      await VideoFilterHelper.applyToFile(
+        editedPath,
+        filter,
+        fallbackFps: fallbackFps,
+      );
+    }
+    return editedPath;
+  }
+
+  static Future<CaptureRequest> videoPath(List<Sensor> sensors) async {
+    final ({String originalPath, String editedPath}) paths =
+        await videoPairPaths();
 
     if (sensors.length == 1) {
-      final String filePath = '${stampDir.path}/video_$timestamp.mp4';
-      return SingleCaptureRequest(filePath, sensors.first);
+      return SingleCaptureRequest(paths.originalPath, sensors.first);
     }
+
+    final Directory stampDir = await _mediaStampDirectory();
+    final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
 
     return MultipleCaptureRequest({
       for (final Sensor sensor in sensors)
         sensor:
-        '${stampDir.path}/${sensor.position == SensorPosition.front ? 'front' : 'back'}_$timestamp.mp4',
+            '${stampDir.path}/${sensor.position == SensorPosition.front ? 'front' : 'back'}_original_$timestamp.mp4',
     });
   }
 
-  /// Moves stamp video into [roketora_media] and removes the stamp file.
-  static Future<bool> saveConfirmedVideo(String stampPath) async {
+  static Future<void> deleteVideoStampPair({
+    required String editedStampPath,
+    String? originalStampPath,
+    Iterable<String> extraPaths = const <String>[],
+  }) async {
+    await deleteIfExists(editedStampPath);
+    if (originalStampPath != null) {
+      await deleteIfExists(originalStampPath);
+    }
+    for (final String path in extraPaths) {
+      await deleteIfExists(path);
+    }
+  }
+
+  /// Publishes edited stamp to Gallery, moves original stamp to [roketora_media].
+  static Future<bool> saveConfirmedVideo({
+    required String editedStampPath,
+    required String originalStampPath,
+  }) async {
+    String? persistedOriginalPath;
+
     try {
-      final File source = File(stampPath);
-      if (!await source.exists()) {
-        debugPrint('Save video skipped: stamp file missing at $stampPath');
+      final bool gallerySaved = await publishVideo(editedStampPath);
+      if (!gallerySaved) return false;
+
+      final File originalFile = File(originalStampPath);
+      if (!await originalFile.exists()) {
+        debugPrint(
+          'Save video skipped: original stamp missing at $originalStampPath',
+        );
         return false;
       }
 
       final Directory mediaDir = await _mediaDirectory();
       final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
-      final String destPath = '${mediaDir.path}/video_$timestamp.mp4';
+      persistedOriginalPath =
+          '${mediaDir.path}/video_original_$timestamp.mp4';
 
       try {
-        await source.rename(destPath);
+        await originalFile.rename(persistedOriginalPath);
       } catch (_) {
-        await source.copy(destPath);
-        await source.delete();
+        await originalFile.copy(persistedOriginalPath);
+        await originalFile.delete();
       }
+
+      await deleteIfExists(editedStampPath);
       return true;
     } catch (e, stackTrace) {
       debugPrint('Save confirmed video failed: $e\n$stackTrace');
+      if (persistedOriginalPath != null) {
+        await deleteIfExists(persistedOriginalPath);
+      }
       return false;
     }
   }
 
-  /// ↧ Publishes filter photos to the device gallery (public).
+  /// ↧ Publishes media to the device gallery (public).
+
+  /// Returns `true` when the video was saved to the gallery.
+  static Future<bool> publishVideo(String filePath) async {
+    try {
+      await Gal.putVideo(filePath, album: 'Roketora');
+      return true;
+    } on GalException catch (e) {
+      debugPrint('Gallery video publish failed: ${e.type.message}');
+      return false;
+    } on MissingPluginException catch (e) {
+      debugPrint(
+        'Gal plugin is not linked ($e). '
+            'Stop the app completely, then run: flutter clean && flutter pub get && flutter run',
+      );
+      return false;
+    } on PlatformException catch (e) {
+      debugPrint('Gallery video publish platform error: $e');
+      return false;
+    } catch (e, stackTrace) {
+      debugPrint('Gallery video publish failed: $e\n$stackTrace');
+      return false;
+    }
+  }
 
   /// Returns `true` when the image was saved to the gallery.
   /// Never throws — capture/preview must continue even if gallery fails.

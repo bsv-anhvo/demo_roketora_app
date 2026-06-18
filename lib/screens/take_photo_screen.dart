@@ -17,8 +17,6 @@ import 'package:demo_roketota_app/widgets/camera/camera_control_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sprintf/sprintf.dart';
-
 class TakePhotoScreen extends CameraScreenBase {
   const TakePhotoScreen({super.key});
 
@@ -127,7 +125,7 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
     } catch (e) {
       _setProcessingMessage(null);
       if (!mounted) return;
-      sprintf(Strings.msgCaptureFailed, [e]).showSnackBar(
+      Strings.msgCaptureFailed('$e').showSnackBar(
         context,
         backgroundColor: Colors.red.shade700,
       );
@@ -163,7 +161,7 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
         _setProcessingMessage(null);
         messenger.showSnackBar(
           SnackBar(
-            content: Text(sprintf(Strings.msgCaptureFailed, [event.exception])),
+            content: Text(Strings.msgCaptureFailed('${event.exception}')),
             backgroundColor: Colors.red.shade700,
           ),
         );
