@@ -16,8 +16,7 @@ const List<LocalizationsDelegate<dynamic>> localizationsDelegates = <Localizatio
   GlobalCupertinoLocalizations.delegate,
 ];
 
-// final localeProvider = StateProvider<Locale?>((Ref ref) => null);
-final localeProvider = StateProvider<Locale?>((Ref ref) => const Locale('ja')); // Setting default locale to Japanese to review app
+final localeProvider = StateProvider<Locale?>((Ref ref) => null);
 
 Locale appLocaleResolutionCallback(Locale? deviceLocale, Iterable<Locale> supportedLocales) {
   if (deviceLocale?.languageCode == 'ja') {
