@@ -1,4 +1,5 @@
 import 'package:demo_roketota_app/core/models/camera_settings.dart';
+import 'package:demo_roketota_app/utils/app_colors.dart';
 import 'package:demo_roketota_app/utils/strings.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
@@ -135,7 +136,7 @@ class _ControlChip extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: Material(
-        color: isActive ? Colors.white24 : Colors.black45,
+        color: isActive ? AppColors.white24 : AppColors.black45,
         borderRadius: BorderRadius.circular(20),
         child: InkWell(
           onTap: onTap,
@@ -145,11 +146,11 @@ class _ControlChip extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, color: Colors.white, size: 18),
-                const SizedBox(width: 6),
+                Icon(icon, color: AppColors.white, size: 18),
+                const Gap(6),
                 Text(
                   label,
-                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                  style: const TextStyle(color: AppColors.white, fontSize: 12),
                 ),
               ],
             ),
@@ -174,24 +175,24 @@ class _ExposureSlider extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.black45,
+        color: AppColors.black45,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         children: [
-          const Icon(Icons.exposure, color: Colors.white, size: 18),
+          const Icon(Icons.exposure, color: AppColors.white, size: 18),
           Expanded(
             child: Slider(
               value: value,
               min: 0,
               max: 1,
-              activeColor: Colors.amber,
+              activeColor: AppColors.amber,
               onChanged: onChanged,
             ),
           ),
           Text(
             _formatExposureOffset(value),
-            style: const TextStyle(color: Colors.white70, fontSize: 12),
+            style: const TextStyle(color: AppColors.white70, fontSize: 12),
           ),
         ],
       ),
@@ -215,7 +216,7 @@ Future<T?> showCameraPickerSheet<T>({
   return showModalBottomSheet<T>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: const Color(0xFF1E1E1E),
+    backgroundColor: AppColors.color30_30_30,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
@@ -228,12 +229,12 @@ Future<T?> showCameraPickerSheet<T>({
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(height: 8),
+              const Gap(8),
               Container(
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.white24,
+                  color: AppColors.white24,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -242,7 +243,7 @@ Future<T?> showCameraPickerSheet<T>({
                 child: Text(
                   title,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: AppColors.white,
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
@@ -254,7 +255,7 @@ Future<T?> showCameraPickerSheet<T>({
                   itemCount: options.length,
                   separatorBuilder: (context, index) => const Divider(
                     height: 1,
-                    color: Colors.white12,
+                    color: AppColors.white12,
                   ),
                   itemBuilder: (context, index) {
                     final T option = options[index];
@@ -265,20 +266,20 @@ Future<T?> showCameraPickerSheet<T>({
                       title: Text(
                         labelBuilder(option),
                         style: TextStyle(
-                          color: isSelected ? Colors.amber : Colors.white,
+                          color: isSelected ? AppColors.amber : AppColors.white,
                           fontWeight:
                               isSelected ? FontWeight.w600 : FontWeight.normal,
                         ),
                       ),
                       trailing: isSelected
-                          ? const Icon(Icons.check, color: Colors.amber)
+                          ? const Icon(Icons.check, color: AppColors.amber)
                           : null,
                       onTap: () => Navigator.pop(context, option),
                     );
                   },
                 ),
               ),
-              const SizedBox(height: 8),
+              const Gap(8),
             ],
           ),
         ),

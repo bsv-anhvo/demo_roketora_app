@@ -9,7 +9,7 @@ class CameraFilterI18n {
 
   static String displayName(AwesomeFilter filter, Locale locale) {
     if (filter.id == AwesomeFilter.None.id) {
-      return Strings.labelOriginal;//locale.languageCode == 'ja' ? 'オリジナル' : 'Original';
+      return Strings.labelOriginal;
     }
 
     return PhotoImageEditorI18n.filtersFor(
@@ -17,7 +17,7 @@ class CameraFilterI18n {
     ).getFilterI18n(_lookupKey(filter.name));
   }
 
-  /// Maps CamerAwesome filter names to pro_image_editor lookup keys.
+  /// Maps Camerawesome filter names to pro_image_editor lookup keys.
   static String _lookupKey(String name) {
     return switch (name) {
       'Addictive Blue' => 'AddictiveBlue',

@@ -1,7 +1,9 @@
 import 'package:camerawesome/camerawesome_plugin.dart';
+import 'package:demo_roketota_app/utils/app_colors.dart';
 import 'package:demo_roketota_app/utils/languages/camera_filter_i18n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:gap/gap.dart';
 
 class CameraFilterStrip extends StatefulWidget {
   const CameraFilterStrip({
@@ -46,7 +48,7 @@ class _CameraFilterStripState extends State<CameraFilterStrip> {
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 8),
             itemCount: widget.filters.length,
-            separatorBuilder: (context, index) => const SizedBox(width: 10),
+            separatorBuilder: (context, index) => const Gap(10),
             itemBuilder: (context, index) {
               final AwesomeFilter filter = widget.filters[index];
               final bool isSelected = filter.id == selected.id;
@@ -104,8 +106,8 @@ class _FilterPreviewTile extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
                   color: isSelected
-                      ? const Color(0xFFFFD60A)
-                      : Colors.white38,
+                      ? AppColors.color255_214_10
+                      : AppColors.white38,
                   width: isSelected ? 2.5 : 1,
                 ),
               ),
@@ -117,14 +119,14 @@ class _FilterPreviewTile extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 6),
+            const Gap(6),
             Text(
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: isSelected ? const Color(0xFFFFD60A) : Colors.white70,
+                color: isSelected ? AppColors.color255_214_10 : AppColors.white70,
                 fontSize: 10,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
               ),
@@ -181,9 +183,9 @@ class _FilterPlaceholder extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color(0xFF5C6BC0),
-            Color(0xFF26A69A),
-            Color(0xFFFFB74D),
+            AppColors.color92_107_192,
+            AppColors.color38_166_154,
+            AppColors.color255_183_77,
           ],
         ),
       ),

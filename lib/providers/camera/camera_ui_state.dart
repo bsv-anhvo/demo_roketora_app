@@ -1,5 +1,6 @@
 import 'package:demo_roketota_app/core/models/camera_settings.dart';
-import 'package:demo_roketota_app/utils/camera_zoom_helper.dart';
+import 'package:demo_roketota_app/core/models/zoom_range.dart';
+import 'package:demo_roketota_app/utils/constants.dart';
 
 class CameraUiState {
   const CameraUiState({
@@ -9,7 +10,7 @@ class CameraUiState {
     this.showFilterStrip = false,
     this.showControlPanel = false,
     this.isOpeningPreview = false,
-    this.zoomRange = CameraZoomHelper.fallbackRange,
+    this.zoomRange = Constants.fallbackRange,
     this.displayZoom = 1.0,
     this.cameraReady = false,
     this.zoomRangeLoaded = false,

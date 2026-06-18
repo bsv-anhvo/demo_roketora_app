@@ -1,5 +1,6 @@
 import 'package:demo_roketota_app/core/extensions/context_extension.dart';
 import 'package:demo_roketota_app/core/extensions/snack_bar_extension.dart';
+import 'package:demo_roketota_app/utils/app_colors.dart';
 import 'package:demo_roketota_app/utils/media_file_helper.dart';
 import 'package:demo_roketota_app/utils/strings.dart';
 import 'package:demo_roketota_app/widgets/media/app_video_preview.dart';
@@ -89,7 +90,7 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
           ),
           TextButton(
             onPressed: () => context.pop(true),
-            style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+            style: TextButton.styleFrom(foregroundColor: AppColors.redAccent),
             child: Text(Strings.labelActionDelete),
           ),
         ],
@@ -114,7 +115,7 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
         _onClosePressed();
       },
       child: Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: AppColors.black,
         body: SafeArea(
           bottom: false,
           child: Stack(
@@ -128,7 +129,7 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
                           ? null
                           : _onClosePressed,
                       icon: const Icon(Icons.close_rounded),
-                      color: Colors.white,
+                      color: AppColors.white,
                     ),
                   ),
                   Expanded(
@@ -145,8 +146,8 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
                             icon: const Icon(Icons.delete_outline_rounded),
                             label: Text(Strings.labelActionDelete),
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.redAccent,
-                              side: const BorderSide(color: Colors.redAccent),
+                              foregroundColor: AppColors.redAccent,
+                              side: const BorderSide(color: AppColors.redAccent),
                               padding:
                                   const EdgeInsets.symmetric(vertical: 14),
                             ),
@@ -160,7 +161,7 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
                             icon: const Icon(Icons.check_rounded),
                             label: Text(Strings.labelActionSave),
                             style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFF1E88E5),
+                              backgroundColor: AppColors.color30_136_229,
                               padding:
                                   const EdgeInsets.symmetric(vertical: 14),
                             ),

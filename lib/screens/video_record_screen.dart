@@ -1,6 +1,7 @@
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:camerawesome/pigeon.dart';
 import 'package:demo_roketota_app/bases/base_camera_screen.dart';
+import 'package:demo_roketota_app/core/extensions/snack_bar_extension.dart';
 import 'package:demo_roketota_app/core/models/camera_settings.dart';
 import 'package:demo_roketota_app/providers/camera/camera_ui_actions_mixin.dart';
 import 'package:demo_roketota_app/providers/camera/camera_ui_state.dart';
@@ -192,13 +193,9 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
       _setProcessingMessage(null);
 
       if (editedStampPath == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              Strings.msgRecordingFailed('Invalid video paths'),
-            ),
-            backgroundColor: Colors.red.shade700,
-          ),
+        Strings.msgRecordingFailed('Invalid video paths').showSnackBar(
+          context,
+          backgroundColor: Colors.red.shade700,
         );
         await MediaFileHelper.deleteIfExists(originalStampPath);
         await _restoreRecordingFilterIfNeeded();
@@ -214,11 +211,9 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
       _notifier.clearRecordingFilter();
       _setProcessingMessage(null);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(Strings.msgRecordingFailed('$e')),
-          backgroundColor: Colors.red.shade700,
-        ),
+      Strings.msgRecordingFailed('$e').showSnackBar(
+        context,
+        backgroundColor: Colors.red.shade700,
       );
       await _restoreRecordingFilterIfNeeded();
     }
@@ -240,8 +235,6 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
 
   @override
   void handleCaptureEvent(BuildContext context, MediaCapture event) {
-    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
-
     switch ((event.status, event.isPicture, event.isVideo)) {
       case (MediaCaptureStatus.capturing, false, true):
         _notifier.startRecordTimer(isMounted: () => mounted);
@@ -267,11 +260,9 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
             ..stop()
             ..reset();
         }
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(Strings.msgRecordingFailed('${event.exception}')),
-            backgroundColor: Colors.red.shade700,
-          ),
+        Strings.msgRecordingFailed('${event.exception}').showSnackBar(
+          context,
+          backgroundColor: Colors.red.shade700,
         );
       default:
         break;

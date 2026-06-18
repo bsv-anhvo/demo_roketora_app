@@ -1,6 +1,7 @@
 import 'package:demo_roketota_app/l10n/app_localizations.dart';
 import 'package:demo_roketota_app/providers/locale_provider.dart';
 import 'package:demo_roketota_app/screens/home_screen.dart';
+import 'package:demo_roketota_app/utils/app_colors.dart';
 import 'package:demo_roketota_app/utils/strings.dart';
 import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit_config.dart';
 import 'package:flutter/material.dart';
@@ -37,8 +38,8 @@ class DemoRoketoraApp extends ConsumerWidget {
       },
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF1E88E5),
-          secondary: const Color(0xFFE53935),
+          seedColor: AppColors.color30_136_229,
+          secondary: AppColors.color229_57_53,
           brightness: Brightness.light,
         ),
         useMaterial3: true,

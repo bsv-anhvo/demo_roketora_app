@@ -1,4 +1,6 @@
-import 'package:demo_roketota_app/utils/camera_zoom_helper.dart';
+import 'package:demo_roketota_app/core/models/zoom_range.dart';
+import 'package:demo_roketota_app/utils/app_colors.dart';
+import 'package:demo_roketota_app/utils/camera_helper.dart';
 import 'package:flutter/material.dart';
 
 class IosStyleZoomSelector extends StatelessWidget {
@@ -15,14 +17,14 @@ class IosStyleZoomSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<double> stops = CameraZoomHelper.buildStops(range);
-    final double activeStop = CameraZoomHelper.closestStop(displayZoom, stops);
+    final List<double> stops = CameraHelper.cameraZoomBuildStops(range);
+    final double activeStop = CameraHelper.cameraZoomClosestStop(displayZoom, stops);
 
     return Center(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
         decoration: BoxDecoration(
-          color: const Color(0x66000000),
+          color: AppColors.colorBlackOpacity40,
           borderRadius: BorderRadius.circular(22),
         ),
         child: Row(
@@ -30,7 +32,7 @@ class IosStyleZoomSelector extends StatelessWidget {
           children: [
             for (final double stop in stops) ...[
               _IosZoomStop(
-                label: CameraZoomHelper.formatZoomLabel(
+                label: CameraHelper.formatZoomLabel(
                   stop,
                   compact: stop != activeStop,
                 ),
@@ -69,13 +71,13 @@ class _IosZoomStop extends StatelessWidget {
         height: isSelected ? 40 : 28,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xB33A3A3C) : Colors.transparent,
+          color: isSelected ? AppColors.color58_58_60_opacity_70 : Colors.transparent,
           shape: BoxShape.circle,
         ),
         child: AnimatedDefaultTextStyle(
           duration: const Duration(milliseconds: 180),
           style: TextStyle(
-            color: isSelected ? const Color(0xFFFFD60A) : Colors.white70,
+            color: isSelected ? AppColors.color255_214_10 : AppColors.white70,
             fontSize: isSelected ? 13 : 11,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
             letterSpacing: -0.2,

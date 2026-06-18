@@ -1,8 +1,8 @@
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:demo_roketota_app/core/models/camera_settings.dart';
+import 'package:demo_roketota_app/core/models/zoom_range.dart';
 import 'package:demo_roketota_app/providers/camera/camera_ui_state.dart';
-import 'package:demo_roketota_app/utils/camera_exposure_helper.dart';
-import 'package:demo_roketota_app/utils/camera_zoom_helper.dart';
+import 'package:demo_roketota_app/utils/camera_helper.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Contract for shared camera UI operations.
@@ -63,7 +63,7 @@ mixin CameraUiActions<S> on AutoDisposeNotifier<S> implements CameraUiHost {
   Future<void> applyExposure(double value) async {
     final double clamped = value.clamp(0.0, 1.0);
     setExposure(clamped);
-    await CameraExposureHelper.apply(clamped);
+    await CameraHelper.applyExposureValue(clamped);
   }
 
   @override
@@ -99,8 +99,8 @@ mixin CameraUiActions<S> on AutoDisposeNotifier<S> implements CameraUiHost {
 
   @override
   Future<void> refreshZoomRange(CameraState state) async {
-    final ZoomRange range = await CameraZoomHelper.load();
-    final double initialZoom = CameraZoomHelper.defaultDisplayZoom(range);
+    final ZoomRange range = await CameraHelper.cameraZoomLoad();
+    final double initialZoom = CameraHelper.defaultDisplayZoom(range);
 
     cameraUi = cameraUi.copyWith(
       zoomRange: range,
@@ -123,6 +123,6 @@ mixin CameraUiActions<S> on AutoDisposeNotifier<S> implements CameraUiHost {
 
     if (cameraUi.cameraReady) return;
     cameraUi = cameraUi.copyWith(cameraReady: true);
-    CameraExposureHelper.apply(cameraUi.exposure);
+    CameraHelper.applyExposureValue(cameraUi.exposure);
   }
 }

@@ -154,16 +154,12 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
 
   @override
   void handleCaptureEvent(BuildContext context, MediaCapture event) {
-    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
-
     switch ((event.status, event.isPicture, event.isVideo)) {
       case (MediaCaptureStatus.failure, true, false):
         _setProcessingMessage(null);
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(Strings.msgCaptureFailed('${event.exception}')),
-            backgroundColor: Colors.red.shade700,
-          ),
+        Strings.msgCaptureFailed('${event.exception}').showSnackBar(
+          context,
+          backgroundColor: Colors.red.shade700,
         );
       default:
         break;

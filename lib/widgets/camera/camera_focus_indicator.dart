@@ -1,3 +1,4 @@
+import 'package:demo_roketota_app/utils/app_colors.dart';
 import 'package:flutter/material.dart';
 
 /// Tap-to-focus frame shown on the camera preview.
@@ -12,7 +13,6 @@ class CameraFocusIndicator extends StatelessWidget {
   static const double _targetSize = 68;
   static const double _cornerLength = 16;
   static const double _strokeWidth = 2.5;
-  static const Color _color = Color(0xFFFFD54F);
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +29,7 @@ class CameraFocusIndicator extends StatelessWidget {
               rectSize: _targetSize * scale,
               cornerLength: _cornerLength * scale,
               strokeWidth: _strokeWidth,
-              color: _color,
+              color: AppColors.color255_213_79,
             ),
           );
         },

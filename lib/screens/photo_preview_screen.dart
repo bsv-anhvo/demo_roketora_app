@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:demo_roketota_app/core/extensions/context_extension.dart';
 import 'package:demo_roketota_app/core/extensions/snack_bar_extension.dart';
+import 'package:demo_roketota_app/utils/app_colors.dart';
 import 'package:demo_roketota_app/utils/media_file_helper.dart';
 import 'package:demo_roketota_app/utils/photo_image_editor_config.dart';
 import 'package:demo_roketota_app/utils/strings.dart';
@@ -307,7 +308,7 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
           ),
           TextButton(
             onPressed: () => context.pop(true),
-            style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+            style: TextButton.styleFrom(foregroundColor: AppColors.redAccent),
             child: Text(Strings.labelActionDelete),
           ),
         ],
@@ -334,7 +335,7 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
         _onClosePressed();
       },
       child: Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: AppColors.black,
         body: Stack(
           children: [
             SafeArea(
@@ -398,7 +399,7 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
           padding: const EdgeInsets.all(24),
           child: Text(
             _errorMessage!,
-            style: const TextStyle(color: Colors.white70, fontSize: 14),
+            style: const TextStyle(color: AppColors.white70, fontSize: 14),
             textAlign: TextAlign.center,
           ),
         ),
@@ -437,8 +438,8 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
                 icon: const Icon(Icons.delete_outline_rounded),
                 label: Text(Strings.labelActionDelete),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.redAccent,
-                  side: const BorderSide(color: Colors.redAccent),
+                  foregroundColor: AppColors.redAccent,
+                  side: const BorderSide(color: AppColors.redAccent),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
               ),
@@ -450,7 +451,7 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
                 icon: const Icon(Icons.check_rounded),
                 label: Text(Strings.labelActionSave),
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF1E88E5),
+                  backgroundColor: AppColors.color30_136_229,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
               ),

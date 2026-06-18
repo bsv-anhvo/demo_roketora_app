@@ -3,12 +3,14 @@ import 'dart:async';
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:camerawesome/pigeon.dart';
 import 'package:demo_roketota_app/core/extensions/context_extension.dart';
+import 'package:demo_roketota_app/core/extensions/snack_bar_extension.dart';
 import 'package:demo_roketota_app/core/models/camera_settings.dart';
 import 'package:demo_roketota_app/providers/camera/camera_ui_actions_mixin.dart';
 import 'package:demo_roketota_app/providers/camera/camera_ui_state.dart';
 import 'package:demo_roketota_app/screens/photo_preview_screen.dart';
 import 'package:demo_roketota_app/screens/video_preview_screen.dart';
-import 'package:demo_roketota_app/utils/camera_focus_helper.dart';
+import 'package:demo_roketota_app/utils/app_colors.dart';
+import 'package:demo_roketota_app/utils/camera_helper.dart';
 import 'package:demo_roketota_app/utils/camera_preset_filters.dart';
 import 'package:demo_roketota_app/providers/locale_provider.dart';
 import 'package:demo_roketota_app/utils/device_requirements.dart';
@@ -192,20 +194,15 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
       _startCamera();
     }
 
-    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
     if (saved == true) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(isVideo ? Strings.msgVideoSaved : Strings.msgPhotoSaved),
-          duration: const Duration(seconds: 2),
-        ),
+      (isVideo ? Strings.msgVideoSaved : Strings.msgPhotoSaved).showSnackBar(
+        context,
+        duration: const Duration(seconds: 2),
       );
     } else if (saved == false) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(Strings.msgDeleted),
-          duration: Duration(seconds: 2),
-        ),
+      Strings.msgDeleted.showSnackBar(
+        context,
+        duration: const Duration(seconds: 2),
       );
     }
   }
@@ -255,7 +252,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
     return IconButton(
       onPressed: () => state.switchCameraSensor(flash: cameraHost.flashMode),
       icon: const Icon(Icons.cameraswitch_outlined),
-      color: Colors.white,
+      color: AppColors.white,
       iconSize: 32,
       tooltip: 'Switch camera',
     );
@@ -282,7 +279,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
 
   Widget _buildPermissionGate() {
     return const Center(
-      child: CircularProgressIndicator(color: Colors.white),
+      child: CircularProgressIndicator(color: AppColors.white),
     );
   }
 
@@ -290,7 +287,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
     return IconButton(
       onPressed: () => context.pop(),
       icon: const Icon(Icons.arrow_back_ios_new_rounded),
-      color: Colors.white,
+      color: AppColors.white,
     );
   }
 
@@ -301,7 +298,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
       onPressed: cameraHost.toggleControlPanel,
       icon: Icon(
         isActive ? Icons.tune_rounded : Icons.tune_outlined,
-        color: isActive ? Colors.white : Colors.white70,
+        color: isActive ? AppColors.white : AppColors.white70,
       ),
     );
   }
@@ -309,7 +306,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.black,
       body: SafeArea(
         bottom: false,
         child: Column(
@@ -358,7 +355,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
                             });
                           },
                         ),
-                        onPreviewTapBuilder: CameraFocusHelper.buildPreviewTap,
+                        onPreviewTapBuilder: CameraHelper.cameraBuildPreviewTap,
                         onMediaCaptureEvent: (event) =>
                             handleCaptureEvent(context, event),
                         topActionsBuilder: (state) {
@@ -374,7 +371,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
                       ),
                     )
                   else
-                    const ColoredBox(color: Colors.black),
+                    const ColoredBox(color: AppColors.black),
                   if (buildOverlay() != null) buildOverlay()!,
                 ],
               ),
