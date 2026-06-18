@@ -162,6 +162,8 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
   @override
   void initState() {
     super.initState();
+    // Pending portrait photo feature
+    // runTask();
   }
 
   void runTask() async {
@@ -332,44 +334,14 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
                 children: [
                   _buildTopBar(),
                   Expanded(child: _buildPreview()),
-                  if (!_isEditing)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: _isDeleting || _isSaving ? null : _onDelete,
-                              icon: const Icon(Icons.delete_outline_rounded),
-                              label: Text(Strings.labelActionDelete),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: Colors.redAccent,
-                                side: const BorderSide(color: Colors.redAccent),
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                              ),
-                            ),
-                          ),
-                          const Gap(16),
-                          Expanded(
-                            child: FilledButton.icon(
-                              onPressed: _isDeleting || _isSaving ? null : _onSave,
-                              icon: const Icon(Icons.check_rounded),
-                              label: Text(Strings.labelActionSave),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: const Color(0xFF1E88E5),
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                  _buildBottomBar(),
                 ],
               ),
             ),
           if (_isDeleting)
             AppLoadingOverlay(message: Strings.msgDeleting),
-          if (_isSaving) AppLoadingOverlay(message: Strings.msgSaving),
+          if (_isSaving)
+            AppLoadingOverlay(message: Strings.msgSaving),
           ],
         ),
       ),
@@ -397,6 +369,7 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
               icon: const Icon(Icons.edit_outlined),
               tooltip: Strings.labelEditPhoto,
             ),
+            // Pending portrait photo feature
             // AppIconButton(
             //   onPressed: pathPhotoSave == null ? null : _toggleView,
             //   icon: Icon(
@@ -440,5 +413,43 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildBottomBar() {
+    if (_isEditing) {
+      return SizedBox.shrink();
+    } else {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+        child: Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _isDeleting || _isSaving ? null : _onDelete,
+                icon: const Icon(Icons.delete_outline_rounded),
+                label: Text(Strings.labelActionDelete),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.redAccent,
+                  side: const BorderSide(color: Colors.redAccent),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+            ),
+            const Gap(16),
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: _isDeleting || _isSaving ? null : _onSave,
+                icon: const Icon(Icons.check_rounded),
+                label: Text(Strings.labelActionSave),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF1E88E5),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
   }
 }

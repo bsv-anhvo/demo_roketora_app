@@ -81,6 +81,6 @@
   "msgCouldNotSaveVideo": "Could not save video. Please try again.",
   "msgFailedToExtractVideoFrames": "Failed to extract video frames",
   "msgNoFramesExtractedFromVideo": "No frames extracted from video",
-  "msgFailedToEncodeFilteredVideo": "Failed to encode filtered video"
+  "msgFailedToEncodeFilteredVideo": "Failed to encode filtered video",
   "labelOriginal": "Original"
 }

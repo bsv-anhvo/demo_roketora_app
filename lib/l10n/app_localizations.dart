@@ -434,6 +434,10 @@ abstract class AppLocalizations {
   /// **'Failed to encode filtered video'**
   String get msgFailedToEncodeFilteredVideo;
 
+  /// No description provided for @labelOriginal.
+  ///
+  /// In en, this message translates to:
+  /// **'Original'**
   String get labelOriginal;
 }
 

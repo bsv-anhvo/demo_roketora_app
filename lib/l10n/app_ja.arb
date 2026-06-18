@@ -55,6 +55,6 @@
   "msgCouldNotSaveVideo": "動画を保存できませんでした。もう一度お試しください。",
   "msgFailedToExtractVideoFrames": "動画フレームの抽出に失敗しました",
   "msgNoFramesExtractedFromVideo": "動画からフレームを抽出できませんでした",
-  "msgFailedToEncodeFilteredVideo": "フィルター付き動画のエンコードに失敗しました"
+  "msgFailedToEncodeFilteredVideo": "フィルター付き動画のエンコードに失敗しました",
   "labelOriginal": "オリジナル"
 }
