@@ -115,11 +115,17 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
 
   void _handleEditBackPress() {
     final ProImageEditorState? editorState = _editorKey.currentState;
-    if (editorState != null && editorState.isSubEditorOpen) {
-      context.pop();
+    if (editorState == null) {
+      _cancelEditMode();
       return;
     }
-    _cancelEditMode();
+
+    if (editorState.isSubEditorOpen) {
+      Navigator.of(context).pop();
+      return;
+    }
+
+    editorState.closeEditor();
   }
 
   Future<void> _saveEditedBytes(Uint8List bytes) async {
@@ -141,10 +147,12 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
   ProImageEditorCallbacks _createImageEditorCallbacks() {
     return ProImageEditorCallbacks(
       onImageEditingComplete: _saveEditedBytes,
-      onCloseEditor: (editorMode) {
-        setState(() {
-          _isEditing = false;
-        });
+      onCloseEditor: (EditorMode editorMode) {
+        if (editorMode != EditorMode.main) {
+          Navigator.of(context).pop();
+          return;
+        }
+        _cancelEditMode();
       },
     );
   }
