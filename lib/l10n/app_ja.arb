@@ -12,6 +12,7 @@
   "labelCameraPermissionRequired": "カメラの許可が必要です",
   "labelMicrophonePermissionRequired": "マイクの許可が必要です",
   "labelPhotoResolution": "写真の解像度",
+  "labelAspectRatio": "アスペクト比",
   "labelVideoResolution": "動画の解像度",
   "labelFrameRate": "フレームレート (FPS)",
   "labelExposure": "露出",

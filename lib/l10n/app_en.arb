@@ -12,6 +12,7 @@
   "labelCameraPermissionRequired": "Camera permission required",
   "labelMicrophonePermissionRequired": "Microphone permission required",
   "labelPhotoResolution": "Photo Resolution",
+  "labelAspectRatio": "Aspect Ratio",
   "labelVideoResolution": "Video Resolution",
   "labelFrameRate": "Frame Rate (FPS)",
   "labelExposure": "Exposure",

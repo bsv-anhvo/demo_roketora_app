@@ -170,6 +170,12 @@ abstract class AppLocalizations {
   /// **'Photo Resolution'**
   String get labelPhotoResolution;
 
+  /// No description provided for @labelAspectRatio.
+  ///
+  /// In en, this message translates to:
+  /// **'Aspect Ratio'**
+  String get labelAspectRatio;
+
   /// No description provided for @labelVideoResolution.
   ///
   /// In en, this message translates to:

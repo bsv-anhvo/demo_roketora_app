@@ -20,7 +20,10 @@ class PhotoFilterHelper {
   /// Bakes EXIF orientation into pixel data so the file displays upright everywhere.
   static Future<void> normalizeOrientation(String filePath) async {
     final img.Image image = await _decodeOrientedImage(filePath);
-    await File(filePath).writeAsBytes(img.encodeJpg(image, quality: 95));
+    await File(filePath).writeAsBytes(
+      img.encodeJpg(image, quality: 88),
+      flush: true,
+    );
   }
 
   static Future<void> applyToFile(String filePath, AwesomeFilter filter) async {
@@ -41,6 +44,6 @@ class PhotoFilterHelper {
       throw Exception(Strings.msgDecodeImageFailed(filePath));
     }
 
-    await File(filePath).writeAsBytes(encoded);
+    await File(filePath).writeAsBytes(encoded, flush: true);
   }
 }

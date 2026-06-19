@@ -22,6 +22,7 @@ class CameraControlPanel extends StatelessWidget {
     this.resolutionLabel,
     this.onFpsTap,
     this.fpsLabel,
+    this.resolutionIcon,
     this.showExposureSlider = false,
     this.showFilterStrip = false,
     this.onToggleExposure,
@@ -45,6 +46,7 @@ class CameraControlPanel extends StatelessWidget {
   final ValueChanged<double> onExposureChanged;
   final VoidCallback onResolutionTap;
   final VoidCallback? onFpsTap;
+  final IconData? resolutionIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -94,8 +96,10 @@ class CameraControlPanel extends StatelessWidget {
                 // ),
               ],
               _ControlChip(
-                icon: Icons.hd_outlined,
-                label: resolutionLabel ?? Strings.labelResolution,
+                icon: resolutionIcon ??
+                    (isPhotoMode ? Icons.aspect_ratio : Icons.hd_outlined),
+                label: resolutionLabel ??
+                    (isPhotoMode ? Strings.labelAspectRatio : Strings.labelResolution),
                 onTap: onResolutionTap,
               ),
               if (!isPhotoMode && onFpsTap != null)

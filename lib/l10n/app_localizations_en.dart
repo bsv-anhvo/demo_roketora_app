@@ -46,6 +46,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get labelPhotoResolution => 'Photo Resolution';
 
   @override
+  String get labelAspectRatio => 'Aspect Ratio';
+
+  @override
   String get labelVideoResolution => 'Video Resolution';
 
   @override

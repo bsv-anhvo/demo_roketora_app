@@ -122,10 +122,12 @@ class TakePhotoNotifier extends AutoDisposeNotifier<TakePhotoState>
       final bool succeeded = await CamerawesomePlugin.takePhoto(captureRequest);
       if (!succeeded) return null;
 
-      await PhotoFilterHelper.normalizeOrientation(paths.originalPath);
-
       await File(paths.originalPath).copy(paths.filterPath);
-      await PhotoFilterHelper.applyToFile(paths.filterPath, activeFilter);
+
+      await Future.wait<void>(<Future<void>>[
+        PhotoFilterHelper.normalizeOrientation(paths.originalPath),
+        PhotoFilterHelper.applyToFile(paths.filterPath, activeFilter),
+      ]);
 
       return (
       filterPath: paths.filterPath,

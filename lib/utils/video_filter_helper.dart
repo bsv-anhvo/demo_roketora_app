@@ -13,6 +13,9 @@ import 'package:path_provider/path_provider.dart';
 class VideoFilterHelper {
   const VideoFilterHelper._();
 
+  static const int _frameBatchSize = 6;
+  static const int _maxFilterHeight = 1080;
+
   static Future<void> applyToFile(
     String filePath,
     AwesomeFilter filter, {
@@ -29,12 +32,18 @@ class VideoFilterHelper {
     final String outputPath = '${workDir.path}/filtered.mp4';
 
     try {
+      final double fps = fallbackFps?.toDouble() ??
+          await _probeVideoFps(filePath) ??
+          30;
+
       final extractSession = await FFmpegKit.executeWithArguments(<String>[
         '-y',
         '-i',
         filePath,
+        '-vf',
+        'fps=$fps,scale=-2:$_maxFilterHeight',
         '-qscale:v',
-        '2',
+        '4',
         framesPattern,
       ]);
       if (!ReturnCode.isSuccess(await extractSession.getReturnCode())) {
@@ -54,12 +63,15 @@ class VideoFilterHelper {
         throw Exception(Strings.msgNoFramesExtractedFromVideo);
       }
 
-      for (final File frame in frames) {
-        await PhotoFilterHelper.applyToFile(frame.path, filter);
+      for (int index = 0; index < frames.length; index += _frameBatchSize) {
+        final int end = (index + _frameBatchSize).clamp(0, frames.length);
+        final List<File> batch = frames.sublist(index, end);
+        await Future.wait<void>(
+          batch.map(
+            (File frame) => PhotoFilterHelper.applyToFile(frame.path, filter),
+          ),
+        );
       }
-
-      final double fps =
-          await _probeVideoFps(filePath) ?? fallbackFps?.toDouble() ?? 30;
 
       final List<String> muxArgs = <String>[
         '-y',
@@ -75,6 +87,10 @@ class VideoFilterHelper {
         '1:a:0?',
         '-c:v',
         'libx264',
+        '-preset',
+        'ultrafast',
+        '-crf',
+        '23',
         '-pix_fmt',
         'yuv420p',
         '-shortest',

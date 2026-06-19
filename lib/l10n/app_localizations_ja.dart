@@ -45,6 +45,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get labelPhotoResolution => '写真の解像度';
 
   @override
+  String get labelAspectRatio => 'アスペクト比';
+
+  @override
   String get labelVideoResolution => '動画の解像度';
 
   @override

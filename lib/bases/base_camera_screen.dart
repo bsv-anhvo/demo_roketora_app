@@ -11,11 +11,11 @@ import 'package:demo_roketota_app/screens/photo_preview_screen.dart';
 import 'package:demo_roketota_app/screens/video_preview_screen.dart';
 import 'package:demo_roketota_app/utils/app_colors.dart';
 import 'package:demo_roketota_app/utils/camera_helper.dart';
+import 'package:demo_roketota_app/utils/camera_preview_viewport.dart';
 import 'package:demo_roketota_app/utils/camera_preset_filters.dart';
 import 'package:demo_roketota_app/providers/locale_provider.dart';
 import 'package:demo_roketota_app/utils/device_requirements.dart';
 import 'package:demo_roketota_app/utils/strings.dart';
-import 'package:demo_roketota_app/widgets/camera/aspect_ratio_preview_overlay.dart';
 import 'package:demo_roketota_app/widgets/camera/camera_filter_strip.dart';
 import 'package:demo_roketota_app/widgets/camera/ios_style_zoom_selector.dart';
 import 'package:demo_roketota_app/widgets/common/app_top_bar.dart';
@@ -39,7 +39,15 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
   CameraAspectRatios get initialAspectRatio => CameraAspectRatios.ratio_4_3;
   CameraPreviewFit get previewFit => CameraPreviewFit.cover;
   Alignment get previewAlignment => Alignment.center;
-  double? get portraitViewportHeightOverWidth => null;
+
+  /// Portrait width/height for the selected capture ratio (e.g. 3/4 for 4:3).
+  /// When set with [previewFit] == [CameraPreviewFit.contain], preview is clipped
+  /// to a centered viewport so iOS and Android stay aligned.
+  double? get targetPreviewWidthOverHeight => null;
+
+  bool get _usesViewportContain =>
+      previewFit == CameraPreviewFit.contain &&
+      targetPreviewWidthOverHeight != null;
   SaveConfig buildSaveConfig();
   VideoOptions buildVideoOptions();
   bool get needsMicrophonePermission => true;
@@ -303,6 +311,61 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
     );
   }
 
+  Widget _buildCameraAwesome() {
+    final bool useViewportMask = _usesViewportContain;
+    final CameraPreviewFit effectivePreviewFit =
+        useViewportMask ? CameraPreviewFit.cover : previewFit;
+    final Alignment effectivePreviewAlignment =
+        useViewportMask ? Alignment.center : previewAlignment;
+
+    return CameraAwesomeBuilder.awesome(
+      saveConfig: buildSaveConfig(),
+      sensorConfig: SensorConfig.single(
+        sensor: Sensor.position(SensorPosition.back),
+        flashMode: cameraHost.flashMode,
+        aspectRatio: initialAspectRatio,
+      ),
+      enablePhysicalButton: true,
+      previewFit: effectivePreviewFit,
+      previewAlignment: effectivePreviewAlignment,
+      previewDecoratorBuilder: useViewportMask
+          ? (CameraState state, AnalysisPreview preview) =>
+              CameraPreviewViewportOverlay(
+                widthOverHeight: targetPreviewWidthOverHeight!,
+                alignment: previewAlignment,
+              )
+          : null,
+      theme: AwesomeTheme(
+        bottomActionsBackgroundColor: Colors.transparent,
+      ),
+      availableFilters: cameraPresetFilters,
+      onPreviewScaleBuilder: (state) => OnPreviewScale(
+        onScale: (normalized) {
+          final double display = cameraUi.zoomRange.clampDisplayZoom(
+            cameraUi.zoomRange.toDisplay(normalized),
+          );
+          state.sensorConfig.setZoom(normalized);
+          Future.microtask(() {
+            if (!mounted) return;
+            cameraHost.setDisplayZoom(display);
+          });
+        },
+      ),
+      onPreviewTapBuilder: CameraHelper.cameraBuildPreviewTap,
+      onMediaCaptureEvent: (event) => handleCaptureEvent(context, event),
+      topActionsBuilder: (state) {
+        state.when(
+          onPhotoMode: onCameraReady,
+          onVideoMode: onCameraReady,
+          onVideoRecordingMode: onCameraReady,
+        );
+        return const SizedBox.shrink();
+      },
+      middleContentBuilder: buildMiddleContentWrapper,
+      bottomActionsBuilder: buildBottomBar,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -320,55 +383,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
                   if (_cameraRunning)
                     KeyedSubtree(
                       key: ValueKey('${cameraWidgetKey}_$_cameraSession'),
-                      child: CameraAwesomeBuilder.awesome(
-                        saveConfig: buildSaveConfig(),
-                        sensorConfig: SensorConfig.single(
-                          sensor: Sensor.position(SensorPosition.back),
-                          flashMode: cameraHost.flashMode,
-                          aspectRatio: initialAspectRatio,
-                        ),
-                        enablePhysicalButton: true,
-                        previewFit: previewFit,
-                        previewAlignment: previewAlignment,
-                        previewDecoratorBuilder:
-                            portraitViewportHeightOverWidth == null
-                                ? null
-                                : (state, preview) =>
-                                    AspectRatioPreviewOverlay(
-                                      heightOverWidth:
-                                          portraitViewportHeightOverWidth!,
-                                    ),
-                        theme: AwesomeTheme(
-                          bottomActionsBackgroundColor: Colors.transparent,
-                        ),
-                        availableFilters: cameraPresetFilters,
-                        onPreviewScaleBuilder: (state) => OnPreviewScale(
-                          onScale: (normalized) {
-                            final double display = cameraUi.zoomRange
-                                .clampDisplayZoom(
-                              cameraUi.zoomRange.toDisplay(normalized),
-                            );
-                            state.sensorConfig.setZoom(normalized);
-                            Future.microtask(() {
-                              if (!mounted) return;
-                              cameraHost.setDisplayZoom(display);
-                            });
-                          },
-                        ),
-                        onPreviewTapBuilder: CameraHelper.cameraBuildPreviewTap,
-                        onMediaCaptureEvent: (event) =>
-                            handleCaptureEvent(context, event),
-                        topActionsBuilder: (state) {
-                          state.when(
-                            onPhotoMode: onCameraReady,
-                            onVideoMode: onCameraReady,
-                            onVideoRecordingMode: onCameraReady,
-                          );
-                          return const SizedBox.shrink();
-                        },
-                        middleContentBuilder: buildMiddleContentWrapper,
-                        bottomActionsBuilder: buildBottomBar,
-                      ),
+                      child: _buildCameraAwesome(),
                     )
                   else
                     const ColoredBox(color: AppColors.black),

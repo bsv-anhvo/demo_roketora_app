@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:camerawesome/pigeon.dart';
 import 'package:demo_roketota_app/bases/base_camera_screen.dart';
@@ -9,6 +7,7 @@ import 'package:demo_roketota_app/providers/camera/camera_ui_actions_mixin.dart'
 import 'package:demo_roketota_app/providers/camera/camera_ui_state.dart';
 import 'package:demo_roketota_app/providers/camera/take_photo_notifier.dart';
 import 'package:demo_roketota_app/providers/camera/take_photo_state.dart';
+import 'package:demo_roketota_app/utils/camera_preview_viewport.dart';
 import 'package:demo_roketota_app/utils/media_file_helper.dart';
 import 'package:demo_roketota_app/utils/strings.dart';
 import 'package:demo_roketota_app/widgets/common/app_camera_capture_button.dart';
@@ -57,14 +56,9 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
   Alignment get previewAlignment => Alignment.topCenter;
 
   @override
-  double? get portraitViewportHeightOverWidth {
-    if (!Platform.isAndroid) return null;
-    if (_photoState.selectedPhotoAspectRatio.aspectRatio !=
-        CameraAspectRatios.ratio_1_1) {
-      return null;
-    }
-    return 1;
-  }
+  double? get targetPreviewWidthOverHeight => CameraPreviewViewport.widthOverHeight(
+        _photoState.selectedPhotoAspectRatio.aspectRatio,
+      );
 
   @override
   SaveConfig buildSaveConfig() {
@@ -140,7 +134,7 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
   Future<void> pickPhotoAspectRatio(CameraState state) async {
     final PhotoAspectRatioOption? picked = await showCameraPickerSheet(
       context: context,
-      title: Strings.labelPhotoResolution,
+      title: Strings.labelAspectRatio,
       options: kPhotoAspectRatios,
       labelBuilder: (option) => option.label,
       selected: _photoState.selectedPhotoAspectRatio,

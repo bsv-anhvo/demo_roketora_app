@@ -25,6 +25,7 @@ class Strings {
   static String get labelCameraPermissionRequired => _l.labelCameraPermissionRequired;
   static String get labelMicrophonePermissionRequired => _l.labelMicrophonePermissionRequired;
   static String get labelPhotoResolution => _l.labelPhotoResolution;
+  static String get labelAspectRatio => _l.labelAspectRatio;
   static String get labelVideoResolution => _l.labelVideoResolution;
   static String get labelFrameRate => _l.labelFrameRate;
   static String get labelExposure => _l.labelExposure;

@@ -8,6 +8,7 @@ import 'package:demo_roketota_app/providers/camera/camera_ui_state.dart';
 import 'package:demo_roketota_app/providers/camera/video_record_notifier.dart';
 import 'package:demo_roketota_app/providers/camera/video_record_state.dart';
 import 'package:demo_roketota_app/utils/constants.dart';
+import 'package:demo_roketota_app/utils/camera_preview_viewport.dart';
 import 'package:demo_roketota_app/utils/media_file_helper.dart';
 import 'package:demo_roketota_app/utils/strings.dart';
 import 'package:demo_roketota_app/widgets/common/app_camera_capture_button.dart';
@@ -29,6 +30,8 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
     with SingleTickerProviderStateMixin {
   String? _processingMessage;
   bool _isHoldRecording = false;
+  bool _isHandlingRecordedVideo = false;
+  String? _handledVideoStampPath;
   late final AnimationController _recordPulseController;
 
   VideoRecordNotifier get _notifier => ref.read(videoRecordProvider.notifier);
@@ -70,6 +73,10 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
 
   @override
   Alignment get previewAlignment => Alignment.topCenter;
+
+  @override
+  double? get targetPreviewWidthOverHeight =>
+      CameraPreviewViewport.widthOverHeight(kVideoRecordAspectRatio);
 
   @override
   CameraAspectRatios get initialAspectRatio => kVideoRecordAspectRatio;
@@ -129,7 +136,7 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
   }
 
   void _onVideoRecordStop() {
-    _setProcessingMessage(Strings.msgProcessingVideo);
+    // Post-record processing overlay is owned by [_openVideoPreview].
   }
 
   void handleHoldRecordStart(CameraState state) {
@@ -179,8 +186,21 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
   }
 
   Future<void> _openVideoPreview(String originalStampPath) async {
-    _setProcessingMessage(Strings.msgProcessingVideo);
+    if (_isHandlingRecordedVideo ||
+        _handledVideoStampPath == originalStampPath ||
+        cameraUi.isOpeningPreview) {
+      return;
+    }
+
+    _isHandlingRecordedVideo = true;
     final AwesomeFilter filter = _notifier.recordingFilterForProcessing();
+    _notifier.clearRecordingFilter();
+
+    final bool needsFilterProcessing = filter.id != AwesomeFilter.None.id;
+    if (needsFilterProcessing) {
+      _setProcessingMessage(Strings.msgProcessingVideo);
+    }
+
     try {
       final String? editedStampPath =
           await MediaFileHelper.createEditedVideoStamp(
@@ -188,9 +208,8 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
         filter,
         fallbackFps: _videoState.videoFps.fps,
       );
-      _notifier.clearRecordingFilter();
+
       if (!mounted) return;
-      _setProcessingMessage(null);
 
       if (editedStampPath == null) {
         Strings.msgRecordingFailed('Invalid video paths').showSnackBar(
@@ -198,23 +217,29 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
           backgroundColor: Colors.red.shade700,
         );
         await MediaFileHelper.deleteIfExists(originalStampPath);
-        await _restoreRecordingFilterIfNeeded();
         return;
       }
+
+      _setProcessingMessage(null);
 
       await openMediaPreview(
         filePath: editedStampPath,
         originalFilePath: originalStampPath,
         isVideo: true,
       );
+
+      _handledVideoStampPath = originalStampPath;
     } catch (e) {
-      _notifier.clearRecordingFilter();
-      _setProcessingMessage(null);
       if (!mounted) return;
       Strings.msgRecordingFailed('$e').showSnackBar(
         context,
         backgroundColor: Colors.red.shade700,
       );
+    } finally {
+      _isHandlingRecordedVideo = false;
+      if (mounted) {
+        _setProcessingMessage(null);
+      }
       await _restoreRecordingFilterIfNeeded();
     }
   }
@@ -237,6 +262,7 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
   void handleCaptureEvent(BuildContext context, MediaCapture event) {
     switch ((event.status, event.isPicture, event.isVideo)) {
       case (MediaCaptureStatus.capturing, false, true):
+        _handledVideoStampPath = null;
         _notifier.startRecordTimer(isMounted: () => mounted);
         _syncRecordPulseAnimation();
       case (MediaCaptureStatus.success, false, true):
@@ -248,7 +274,9 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
             ..reset();
         }
         final String? path = mediaPathFromCapture(event);
-        if (path != null) {
+        if (path != null &&
+            !_isHandlingRecordedVideo &&
+            !cameraUi.isOpeningPreview) {
           _openVideoPreview(path);
         }
       case (MediaCaptureStatus.failure, false, true):
