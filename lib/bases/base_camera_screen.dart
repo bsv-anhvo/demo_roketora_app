@@ -49,7 +49,6 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
       previewFit == CameraPreviewFit.contain &&
       targetPreviewWidthOverHeight != null;
   SaveConfig buildSaveConfig();
-  VideoOptions buildVideoOptions();
   bool get needsMicrophonePermission => true;
 
   bool _permissionsReady = false;

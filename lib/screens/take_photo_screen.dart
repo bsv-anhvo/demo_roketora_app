@@ -68,19 +68,6 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
   }
 
   @override
-  VideoOptions buildVideoOptions() {
-    return VideoOptions(
-      enableAudio: true,
-      quality: VideoRecordingQuality.fhd,
-      android: AndroidVideoOptions(
-        bitrate: 6000000,
-        fallbackStrategy: QualityFallbackStrategy.lower,
-      ),
-      ios: CupertinoVideoOptions(fps: 30),
-    );
-  }
-
-  @override
   void onCameraReady(CameraState state) {
     _notifier.onCameraReady(state);
   }

@@ -85,12 +85,11 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
   SaveConfig buildSaveConfig() {
     return SaveConfig.video(
       pathBuilder: MediaFileHelper.videoPath,
-      videoOptions: buildVideoOptions(),
+      videoOptions: _buildVideoOptions(),
     );
   }
 
-  @override
-  VideoOptions buildVideoOptions() {
+  VideoOptions _buildVideoOptions() {
     return VideoOptions(
       enableAudio: true,
       quality: _videoState.videoQuality,
