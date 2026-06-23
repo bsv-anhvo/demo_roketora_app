@@ -1,9 +1,12 @@
+import 'dart:io' show Platform;
+
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:camerawesome/pigeon.dart';
 import 'package:demo_roketota_app/core/extensions/logger_extension.dart';
 import 'package:demo_roketota_app/core/models/zoom_range.dart';
 import 'package:demo_roketota_app/utils/constants.dart';
 import 'package:demo_roketota_app/widgets/camera/camera_focus_indicator.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 /// Applies relative pinch deltas on top of the current zoom instead of using
@@ -16,7 +19,7 @@ class BoundedPinchZoomHandler {
   final Duration gestureIdleTimeout;
 
   double? _lastDetectorNormalized;
-  double _currentNormalized = 0;
+  double _currentDisplayZoom = 1.0;
   DateTime? _lastPinchAt;
 
   void reset() {
@@ -24,7 +27,7 @@ class BoundedPinchZoomHandler {
     _lastPinchAt = null;
   }
 
-  /// Returns clamped plugin zoom to apply, or null when unchanged.
+  /// Returns clamped display zoom to apply, or null when unchanged.
   double? handleScale({
     required ZoomRange range,
     required double detectorNormalized,
@@ -37,8 +40,7 @@ class BoundedPinchZoomHandler {
     _lastPinchAt = now;
 
     if (isNewGesture || _lastDetectorNormalized == null) {
-      _currentNormalized =
-          range.clampNormalized(range.toNormalized(currentDisplayZoom));
+      _currentDisplayZoom = range.clampDisplayZoom(currentDisplayZoom);
       _lastDetectorNormalized = detectorNormalized;
       return null;
     }
@@ -48,13 +50,42 @@ class BoundedPinchZoomHandler {
 
     if (delta.abs() < 0.0001) return null;
 
-    _currentNormalized = range.clampNormalized(_currentNormalized + delta);
-    return _currentNormalized;
+    final double displaySpan = range.displayMax - range.displayMin;
+    _currentDisplayZoom = range.clampDisplayZoom(
+      _currentDisplayZoom + delta * displaySpan,
+    );
+    return _currentDisplayZoom;
   }
 }
 
 class CameraHelper {
   CameraHelper._();
+
+  /// Clamps [displayZoom] to [range] and maps it to the plugin value [0, 1].
+  static ({double display, double normalized}) resolveDisplayZoom(
+    ZoomRange range,
+    double displayZoom,
+  ) {
+    final double display = range.clampDisplayZoom(displayZoom);
+    final double normalized = range.toNormalized(display);
+    'Apply zoom display=$display normalized=$normalized '
+            'range=[${range.displayMin}, ${range.displayMax}] '
+            'device=[${range.deviceMin}, ${range.deviceMax}] '
+            'iosCurve=${range.useIosZoomCurve}'
+        .log();
+    return (display: display, normalized: normalized);
+  }
+
+  static Future<double> applyDisplayZoom({
+    required SensorConfig sensorConfig,
+    required ZoomRange range,
+    required double displayZoom,
+  }) async {
+    final ({double display, double normalized}) resolved =
+        resolveDisplayZoom(range, displayZoom);
+    await sensorConfig.setZoom(resolved.normalized);
+    return resolved.display;
+  }
 
   /// Applies exposure compensation. [normalized] is in [0,1]; 0.5 is neutral.
   static Future<void> applyExposureValue(double normalized) {
@@ -184,18 +215,27 @@ class CameraHelper {
         return Constants.fallbackRange;
       }
 
-      // Plugin [0,1] maps to optical [deviceMin, deviceMax] using native limits.
-      // iOS reports min=0 but optical min is 1x.
-      final double deviceMin = nativeMin <= 0 ? 1.0 : nativeMin;
-      final double deviceMax = nativeMaxZoom;
-      final double displayMin = Constants.desiredMin.clamp(deviceMin, deviceMax);
-      final double displayMax = Constants.desiredMax.clamp(deviceMin, deviceMax);
+      final bool useIosZoomCurve = !kIsWeb && Platform.isIOS;
+      // iOS getMinZoom() returns 0 but optical min is 1x; Android uses minZoomRatio.
+      final double opticalMin = useIosZoomCurve
+          ? 1.0
+          : (nativeMin <= 0 ? 1.0 : nativeMin);
+      final double opticalMax = nativeMaxZoom;
+      final double displayMin =
+          Constants.desiredMin.clamp(opticalMin, opticalMax);
+      final double displayMax =
+          Constants.desiredMax.clamp(opticalMin, opticalMax);
+
+      'Camera zoom optical range: $opticalMin - $opticalMax, '
+              'display: $displayMin - $displayMax, iosCurve: $useIosZoomCurve'
+          .log();
 
       return ZoomRange(
         displayMin: displayMin,
-        displayMax: displayMax >= displayMin ? displayMax : deviceMax,
-        deviceMin: deviceMin,
-        deviceMax: deviceMax,
+        displayMax: displayMax >= displayMin ? displayMax : opticalMax,
+        deviceMin: opticalMin,
+        deviceMax: opticalMax,
+        useIosZoomCurve: useIosZoomCurve,
       );
     } catch (_) {
       return Constants.fallbackRange;

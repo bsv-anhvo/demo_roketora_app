@@ -1,6 +1,8 @@
+import 'package:demo_roketota_app/core/extensions/logger_extension.dart';
 import 'package:demo_roketota_app/core/models/zoom_range.dart';
 import 'package:demo_roketota_app/utils/app_colors.dart';
 import 'package:demo_roketota_app/utils/camera_helper.dart';
+import 'package:demo_roketota_app/widgets/camera/ios_camera_zoom_dial.dart';
 import 'package:flutter/material.dart';
 
 class IosStyleZoomSelector extends StatelessWidget {
@@ -18,31 +20,17 @@ class IosStyleZoomSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final List<double> stops = CameraHelper.cameraZoomBuildStops(range);
-    final double activeStop = CameraHelper.cameraZoomClosestStop(displayZoom, stops);
 
-    return Center(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-        decoration: BoxDecoration(
-          color: AppColors.colorBlackOpacity40,
-          borderRadius: BorderRadius.circular(22),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final double stop in stops) ...[
-              _IosZoomStop(
-                label: CameraHelper.formatZoomLabel(
-                  stop,
-                  compact: stop != activeStop,
-                ),
-                isSelected: stop == activeStop,
-                onTap: () => onZoomSelected(stop),
-              ),
-              if (stop != stops.last) const SizedBox(width: 2),
-            ],
-          ],
-        ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: IosCameraZoomDial(
+        currentZoom: displayZoom,
+        minZoom: stops.first,
+        maxZoom: stops.last,
+        onChange: (stop) {
+          "zoom level: $stop".log();
+          onZoomSelected(stop);
+        },
       ),
     );
   }

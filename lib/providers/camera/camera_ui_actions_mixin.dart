@@ -91,9 +91,11 @@ mixin CameraUiActions<S> on AutoDisposeNotifier<S> implements CameraUiHost {
 
   @override
   Future<void> applyZoom(SensorConfig sensorConfig, double zoom) async {
-    final double clamped = cameraUi.zoomRange.clampDisplayZoom(zoom);
-    final double normalized = cameraUi.zoomRange.toNormalized(clamped);
-    await sensorConfig.setZoom(normalized);
+    final double clamped = await CameraHelper.applyDisplayZoom(
+      sensorConfig: sensorConfig,
+      range: cameraUi.zoomRange,
+      displayZoom: zoom,
+    );
     setDisplayZoom(clamped);
   }
 

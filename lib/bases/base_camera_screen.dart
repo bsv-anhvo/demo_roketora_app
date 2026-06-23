@@ -347,18 +347,19 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
       onPreviewScaleBuilder: (state) => OnPreviewScale(
         onScale: (normalized) {
           final ZoomRange range = cameraUi.zoomRange;
-          final double? clampedNormalized = _pinchZoomHandler.handleScale(
+          final double? displayZoom = _pinchZoomHandler.handleScale(
             range: range,
             detectorNormalized: normalized,
             currentDisplayZoom: cameraUi.displayZoom,
           );
-          if (clampedNormalized == null) return;
+          if (displayZoom == null) return;
 
-          final double display = range.toDisplay(clampedNormalized);
-          state.sensorConfig.setZoom(clampedNormalized);
+          final ({double display, double normalized}) resolved =
+              CameraHelper.resolveDisplayZoom(range, displayZoom);
+          state.sensorConfig.setZoom(resolved.normalized);
           Future.microtask(() {
             if (!mounted) return;
-            cameraHost.setDisplayZoom(display);
+            cameraHost.setDisplayZoom(resolved.display);
           });
         },
       ),
