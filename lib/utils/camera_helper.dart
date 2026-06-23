@@ -9,55 +9,6 @@ import 'package:demo_roketota_app/widgets/camera/camera_focus_indicator.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
-/// Applies relative pinch deltas on top of the current zoom instead of using
-/// camerawesome's absolute [0, 1] gesture value (which drifts after UI zoom).
-class BoundedPinchZoomHandler {
-  BoundedPinchZoomHandler({
-    this.gestureIdleTimeout = const Duration(milliseconds: 150),
-  });
-
-  final Duration gestureIdleTimeout;
-
-  double? _lastDetectorNormalized;
-  double _currentDisplayZoom = 1.0;
-  DateTime? _lastPinchAt;
-
-  void reset() {
-    _lastDetectorNormalized = null;
-    _lastPinchAt = null;
-  }
-
-  /// Returns clamped display zoom to apply, or null when unchanged.
-  double? handleScale({
-    required ZoomRange range,
-    required double detectorNormalized,
-    required double currentDisplayZoom,
-  }) {
-    final DateTime now = DateTime.now();
-    final bool isNewGesture = _lastPinchAt == null ||
-        now.difference(_lastPinchAt!) > gestureIdleTimeout;
-
-    _lastPinchAt = now;
-
-    if (isNewGesture || _lastDetectorNormalized == null) {
-      _currentDisplayZoom = range.clampDisplayZoom(currentDisplayZoom);
-      _lastDetectorNormalized = detectorNormalized;
-      return null;
-    }
-
-    final double delta = detectorNormalized - _lastDetectorNormalized!;
-    _lastDetectorNormalized = detectorNormalized;
-
-    if (delta.abs() < 0.0001) return null;
-
-    final double displaySpan = range.displayMax - range.displayMin;
-    _currentDisplayZoom = range.clampDisplayZoom(
-      _currentDisplayZoom + delta * displaySpan,
-    );
-    return _currentDisplayZoom;
-  }
-}
-
 class CameraHelper {
   CameraHelper._();
 
@@ -68,11 +19,6 @@ class CameraHelper {
   ) {
     final double display = range.clampDisplayZoom(displayZoom);
     final double normalized = range.toNormalized(display);
-    'Apply zoom display=$display normalized=$normalized '
-            'range=[${range.displayMin}, ${range.displayMax}] '
-            'device=[${range.deviceMin}, ${range.deviceMax}] '
-            'iosCurve=${range.useIosZoomCurve}'
-        .log();
     return (display: display, normalized: normalized);
   }
 

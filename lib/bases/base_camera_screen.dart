@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:camerawesome/camerawesome_plugin.dart';
-import 'package:camerawesome/pigeon.dart';
 import 'package:demo_roketota_app/core/extensions/context_extension.dart';
 import 'package:demo_roketota_app/core/extensions/snack_bar_extension.dart';
 import 'package:demo_roketota_app/core/models/camera_settings.dart';
@@ -17,6 +16,7 @@ import 'package:demo_roketota_app/utils/camera_preset_filters.dart';
 import 'package:demo_roketota_app/providers/locale_provider.dart';
 import 'package:demo_roketota_app/utils/device_requirements.dart';
 import 'package:demo_roketota_app/utils/strings.dart';
+import 'package:demo_roketota_app/widgets/camera/bounded_pinch_zoom_overlay.dart';
 import 'package:demo_roketota_app/widgets/camera/camera_filter_strip.dart';
 import 'package:demo_roketota_app/widgets/camera/ios_style_zoom_selector.dart';
 import 'package:demo_roketota_app/widgets/common/app_top_bar.dart';
@@ -57,7 +57,6 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
   bool _cameraRunning = false;
   bool _pausedForLifecycle = false;
   int _cameraSession = 0;
-  final BoundedPinchZoomHandler _pinchZoomHandler = BoundedPinchZoomHandler();
 
   @override
   void initState() {
@@ -125,7 +124,6 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
     if (pausedForLifecycle) {
       _pausedForLifecycle = true;
     }
-    _pinchZoomHandler.reset();
     cameraHost.resetCameraSession();
     setState(() => _cameraRunning = false);
   }
@@ -254,10 +252,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
     return IosStyleZoomSelector(
       range: cameraUi.zoomRange,
       displayZoom: cameraUi.displayZoom,
-      onZoomSelected: (zoom) {
-        _pinchZoomHandler.reset();
-        cameraHost.applyZoom(state.sensorConfig, zoom);
-      },
+      onZoomSelected: (zoom) => cameraHost.applyZoom(state.sensorConfig, zoom),
     );
   }
 
@@ -316,6 +311,34 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
     );
   }
 
+  void _applyPinchDisplayZoom(CameraState state, double displayZoom) {
+    final ZoomRange range = cameraUi.zoomRange;
+    final ({double display, double normalized}) resolved =
+        CameraHelper.resolveDisplayZoom(range, displayZoom);
+    state.sensorConfig.setZoom(resolved.normalized);
+    cameraHost.setDisplayZoom(resolved.display);
+  }
+
+  Widget _buildPreviewDecorator(CameraState state, AnalysisPreview preview) {
+    final bool useViewportMask = _usesViewportContain;
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        if (useViewportMask)
+          CameraPreviewViewportOverlay(
+            widthOverHeight: targetPreviewWidthOverHeight!,
+            alignment: previewAlignment,
+          ),
+        BoundedPinchZoomOverlay(
+          range: cameraUi.zoomRange,
+          displayZoom: cameraUi.displayZoom,
+          onDisplayZoom: (zoom) => _applyPinchDisplayZoom(state, zoom),
+        ),
+      ],
+    );
+  }
+
   Widget _buildCameraAwesome() {
     final bool useViewportMask = _usesViewportContain;
     final CameraPreviewFit effectivePreviewFit =
@@ -333,36 +356,12 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
       enablePhysicalButton: true,
       previewFit: effectivePreviewFit,
       previewAlignment: effectivePreviewAlignment,
-      previewDecoratorBuilder: useViewportMask
-          ? (CameraState state, AnalysisPreview preview) =>
-              CameraPreviewViewportOverlay(
-                widthOverHeight: targetPreviewWidthOverHeight!,
-                alignment: previewAlignment,
-              )
-          : null,
+      previewDecoratorBuilder: _buildPreviewDecorator,
       theme: AwesomeTheme(
         bottomActionsBackgroundColor: Colors.transparent,
       ),
       availableFilters: cameraPresetFilters,
-      onPreviewScaleBuilder: (state) => OnPreviewScale(
-        onScale: (normalized) {
-          final ZoomRange range = cameraUi.zoomRange;
-          final double? displayZoom = _pinchZoomHandler.handleScale(
-            range: range,
-            detectorNormalized: normalized,
-            currentDisplayZoom: cameraUi.displayZoom,
-          );
-          if (displayZoom == null) return;
-
-          final ({double display, double normalized}) resolved =
-              CameraHelper.resolveDisplayZoom(range, displayZoom);
-          state.sensorConfig.setZoom(resolved.normalized);
-          Future.microtask(() {
-            if (!mounted) return;
-            cameraHost.setDisplayZoom(resolved.display);
-          });
-        },
-      ),
+      onPreviewScaleBuilder: (_) => OnPreviewScale(onScale: (_) {}),
       onPreviewTapBuilder: CameraHelper.cameraBuildPreviewTap,
       onMediaCaptureEvent: (event) => handleCaptureEvent(context, event),
       topActionsBuilder: (state) {
