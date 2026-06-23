@@ -5,6 +5,7 @@ import 'package:camerawesome/pigeon.dart';
 import 'package:demo_roketota_app/core/extensions/context_extension.dart';
 import 'package:demo_roketota_app/core/extensions/snack_bar_extension.dart';
 import 'package:demo_roketota_app/core/models/camera_settings.dart';
+import 'package:demo_roketota_app/core/models/zoom_range.dart';
 import 'package:demo_roketota_app/providers/camera/camera_ui_actions_mixin.dart';
 import 'package:demo_roketota_app/providers/camera/camera_ui_state.dart';
 import 'package:demo_roketota_app/screens/photo_preview_screen.dart';
@@ -56,6 +57,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
   bool _cameraRunning = false;
   bool _pausedForLifecycle = false;
   int _cameraSession = 0;
+  final BoundedPinchZoomHandler _pinchZoomHandler = BoundedPinchZoomHandler();
 
   @override
   void initState() {
@@ -123,6 +125,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
     if (pausedForLifecycle) {
       _pausedForLifecycle = true;
     }
+    _pinchZoomHandler.reset();
     cameraHost.resetCameraSession();
     setState(() => _cameraRunning = false);
   }
@@ -251,7 +254,10 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
     return IosStyleZoomSelector(
       range: cameraUi.zoomRange,
       displayZoom: cameraUi.displayZoom,
-      onZoomSelected: (zoom) => cameraHost.applyZoom(state.sensorConfig, zoom),
+      onZoomSelected: (zoom) {
+        _pinchZoomHandler.reset();
+        cameraHost.applyZoom(state.sensorConfig, zoom);
+      },
     );
   }
 
@@ -340,10 +346,16 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
       availableFilters: cameraPresetFilters,
       onPreviewScaleBuilder: (state) => OnPreviewScale(
         onScale: (normalized) {
-          final double display = cameraUi.zoomRange.clampDisplayZoom(
-            cameraUi.zoomRange.toDisplay(normalized),
+          final ZoomRange range = cameraUi.zoomRange;
+          final double? clampedNormalized = _pinchZoomHandler.handleScale(
+            range: range,
+            detectorNormalized: normalized,
+            currentDisplayZoom: cameraUi.displayZoom,
           );
-          state.sensorConfig.setZoom(normalized);
+          if (clampedNormalized == null) return;
+
+          final double display = range.toDisplay(clampedNormalized);
+          state.sensorConfig.setZoom(clampedNormalized);
           Future.microtask(() {
             if (!mounted) return;
             cameraHost.setDisplayZoom(display);

@@ -26,4 +26,12 @@ class ZoomRange {
   double clampDisplayZoom(double zoom) {
     return zoom.clamp(displayMin, displayMax);
   }
+
+  /// Clamps plugin zoom [0, 1] to the allowed display range.
+  double clampNormalized(double normalized) {
+    return normalized.clamp(
+      toNormalized(displayMin),
+      toNormalized(displayMax),
+    );
+  }
 }

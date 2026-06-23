@@ -1,9 +1,57 @@
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:camerawesome/pigeon.dart';
+import 'package:demo_roketota_app/core/extensions/logger_extension.dart';
 import 'package:demo_roketota_app/core/models/zoom_range.dart';
 import 'package:demo_roketota_app/utils/constants.dart';
 import 'package:demo_roketota_app/widgets/camera/camera_focus_indicator.dart';
 import 'package:flutter/material.dart';
+
+/// Applies relative pinch deltas on top of the current zoom instead of using
+/// camerawesome's absolute [0, 1] gesture value (which drifts after UI zoom).
+class BoundedPinchZoomHandler {
+  BoundedPinchZoomHandler({
+    this.gestureIdleTimeout = const Duration(milliseconds: 150),
+  });
+
+  final Duration gestureIdleTimeout;
+
+  double? _lastDetectorNormalized;
+  double _currentNormalized = 0;
+  DateTime? _lastPinchAt;
+
+  void reset() {
+    _lastDetectorNormalized = null;
+    _lastPinchAt = null;
+  }
+
+  /// Returns clamped plugin zoom to apply, or null when unchanged.
+  double? handleScale({
+    required ZoomRange range,
+    required double detectorNormalized,
+    required double currentDisplayZoom,
+  }) {
+    final DateTime now = DateTime.now();
+    final bool isNewGesture = _lastPinchAt == null ||
+        now.difference(_lastPinchAt!) > gestureIdleTimeout;
+
+    _lastPinchAt = now;
+
+    if (isNewGesture || _lastDetectorNormalized == null) {
+      _currentNormalized =
+          range.clampNormalized(range.toNormalized(currentDisplayZoom));
+      _lastDetectorNormalized = detectorNormalized;
+      return null;
+    }
+
+    final double delta = detectorNormalized - _lastDetectorNormalized!;
+    _lastDetectorNormalized = detectorNormalized;
+
+    if (delta.abs() < 0.0001) return null;
+
+    _currentNormalized = range.clampNormalized(_currentNormalized + delta);
+    return _currentNormalized;
+  }
+}
 
 class CameraHelper {
   CameraHelper._();
@@ -73,19 +121,29 @@ class CameraHelper {
   }
 
   static List<double> cameraZoomBuildStops(ZoomRange range) {
-    final List<double> stops = Constants.presetStops
-        .where(
-          (stop) => stop >= range.displayMin - 0.01 && stop <= range.displayMax + 0.01,
-    )
-        .toList();
-
-    if (stops.isNotEmpty) return stops;
-
     if (range.displayMin == range.displayMax) {
       return [range.displayMin];
     }
 
-    return [range.displayMin, range.displayMax];
+    const double epsilon = 0.01;
+    const List<double> candidates = [1.0, 2.0];
+    final List<double> stops = [range.displayMin];
+
+    for (final double value in candidates) {
+      if (value < range.displayMin - epsilon || value > range.displayMax + epsilon) {
+        continue;
+      }
+      if (stops.any((stop) => (stop - value).abs() < epsilon)) {
+        continue;
+      }
+      stops.add(value);
+    }
+
+    if (!stops.any((stop) => (stop - range.displayMax).abs() < epsilon)) {
+      stops.add(range.displayMax);
+    }
+
+    return stops;
   }
 
   static double cameraZoomClosestStop(double displayZoom, List<double> stops) {
@@ -118,14 +176,18 @@ class CameraHelper {
   static Future<ZoomRange> cameraZoomLoad() async {
     try {
       final double? nativeMin = await CamerawesomePlugin.getMinZoom();
-      final double? nativeMax = await CamerawesomePlugin.getMaxZoom();
+      final double? nativeMaxZoom = await CamerawesomePlugin.getMaxZoom();
 
-      if (nativeMin == null || nativeMax == null || nativeMax <= 0) {
+      'Camera zoom native range: $nativeMin - $nativeMaxZoom'.log();
+
+      if (nativeMin == null || nativeMaxZoom == null || nativeMaxZoom <= 0) {
         return Constants.fallbackRange;
       }
 
-      final double deviceMin = nativeMin;
-      final double deviceMax = nativeMax;
+      // Plugin [0,1] maps to optical [deviceMin, deviceMax] using native limits.
+      // iOS reports min=0 but optical min is 1x.
+      final double deviceMin = nativeMin <= 0 ? 1.0 : nativeMin;
+      final double deviceMax = nativeMaxZoom;
       final double displayMin = Constants.desiredMin.clamp(deviceMin, deviceMax);
       final double displayMax = Constants.desiredMax.clamp(deviceMin, deviceMax);
 
