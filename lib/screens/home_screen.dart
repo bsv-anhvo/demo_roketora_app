@@ -1,4 +1,5 @@
 import 'package:demo_roketota_app/core/extensions/context_extension.dart';
+import 'package:demo_roketota_app/screens/ios_zoom_dial_demo_screen.dart';
 import 'package:demo_roketota_app/screens/take_photo_screen.dart';
 import 'package:demo_roketota_app/screens/video_record_screen.dart';
 import 'package:demo_roketota_app/utils/device_requirements.dart';
@@ -103,6 +104,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ],
+              ),
+              TextButton.icon(
+                onPressed: () => context.push(const IosZoomDialDemoScreen()),
+                icon: const Icon(Icons.zoom_in_map_rounded),
+                label: const Text('iOS Zoom Dial Demo'),
               ),
               const Spacer(),
             ],
