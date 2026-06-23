@@ -179,6 +179,8 @@ class _ZoomDialTicksPainter extends CustomPainter {
 
   static const double _visibleHalfAngle = 0.95;
   static const double _anglePerLogUnit = 0.72;
+  static const double _labelFadeStartAngle = 0.22;
+  static const double _labelFadeEndAngle = 0.08;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -288,26 +290,40 @@ class _ZoomDialTicksPainter extends CustomPainter {
 
       final double angle = _angleForZoom(stop, logZoom);
       if (angle.abs() > _visibleHalfAngle - 0.05) continue;
+      if (centeredStop != null && (stop - centeredStop).abs() < 0.001) continue;
 
-      final bool isCentered = centeredStop != null && (stop - centeredStop).abs() < 0.001;
+      final double opacity = _labelOpacityForAngle(angle);
+      if (opacity <= 0) continue;
+
       _paintLabelOnWheel(
         canvas,
         textPainter: textPainter,
         angle: angle,
-        zoomText: _IosZoomDialFormat.zoom(stop, withSuffix: isCentered),
-        isActive: isCentered,
+        zoomText: _IosZoomDialFormat.zoom(stop, withSuffix: false),
+        isActive: false,
+        opacity: opacity,
       );
     }
 
-    if (centeredStop == null) {
-      _paintLabelOnWheel(
-        canvas,
-        textPainter: textPainter,
-        angle: 0,
-        zoomText: _IosZoomDialFormat.zoom(zoom, withSuffix: true),
-        isActive: true,
-      );
-    }
+    _paintLabelOnWheel(
+      canvas,
+      textPainter: textPainter,
+      angle: 0,
+      zoomText: _IosZoomDialFormat.zoom(
+        centeredStop ?? zoom,
+        withSuffix: true,
+      ),
+      isActive: true,
+      opacity: 1,
+    );
+  }
+
+  double _labelOpacityForAngle(double angle) {
+    final double absAngle = angle.abs();
+    if (absAngle <= _labelFadeEndAngle) return 0;
+    if (absAngle >= _labelFadeStartAngle) return 1;
+    return (absAngle - _labelFadeEndAngle) /
+        (_labelFadeStartAngle - _labelFadeEndAngle);
   }
 
   double? _centeredMajorStop() {
@@ -323,10 +339,13 @@ class _ZoomDialTicksPainter extends CustomPainter {
     required double angle,
     required String zoomText,
     required bool isActive,
+    required double opacity,
   }) {
     final Offset labelAnchor = _pointOnArc(angle, radius - 26);
 
-    final Color zoomColor = isActive ? AppColors.color255_214_10 : AppColors.white;
+    final Color baseColor =
+        isActive ? AppColors.color255_214_10 : AppColors.white;
+    final Color zoomColor = baseColor.withValues(alpha: baseColor.a * opacity);
     final double zoomFontSize = isActive ? 15 : 13;
 
     textPainter.text = TextSpan(
