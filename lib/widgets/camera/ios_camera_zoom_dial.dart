@@ -7,25 +7,24 @@ import 'package:flutter/services.dart';
 
 /// Curved zoom dial modeled after the iOS Camera app.
 ///
-/// Drag horizontally to adjust zoom. A fixed yellow caret at the top marks the
-/// current value; tick marks and labels scroll together along the arc beneath it.
+/// [minZoom] to [maxZoom] map to the ruler arc. Drag horizontally to adjust
+/// zoom; [onChange] is called with the updated value.
 class IosCameraZoomDial extends StatefulWidget {
   const IosCameraZoomDial({
     super.key,
-    required this.zoom,
-    required this.onZoomChanged,
-    this.minZoom = 0.5,
-    this.maxZoom = 15.0,
-    this.majorStops = const [0.5, 1.0, 2.0, 3.0, 5.0, 15.0],
+    required this.currentZoom,
+    required this.minZoom,
+    required this.maxZoom,
+    required this.onChange,
     this.showBlur = true,
     this.height = 132,
-  });
+  })  : assert(minZoom > 0, 'minZoom must be positive for log-scale ruler'),
+        assert(maxZoom >= minZoom, 'maxZoom must be >= minZoom');
 
-  final double zoom;
-  final ValueChanged<double> onZoomChanged;
+  final double currentZoom;
   final double minZoom;
   final double maxZoom;
-  final List<double> majorStops;
+  final ValueChanged<double> onChange;
   final bool showBlur;
   final double height;
 
@@ -39,7 +38,11 @@ class _IosCameraZoomDialState extends State<IosCameraZoomDial> {
 
   double? _dragZoom;
 
-  double get _clampedZoom => widget.zoom.clamp(widget.minZoom, widget.maxZoom);
+  List<double> get _majorStops =>
+      _ZoomDialMetrics.majorStopsForRange(widget.minZoom, widget.maxZoom);
+
+  double get _clampedZoom =>
+      widget.currentZoom.clamp(widget.minZoom, widget.maxZoom);
 
   void _onHorizontalDragStart() {
     _dragZoom = _clampedZoom;
@@ -60,7 +63,7 @@ class _IosCameraZoomDialState extends State<IosCameraZoomDial> {
     if ((nextZoom - previousZoom).abs() < 1e-9) return;
 
     _dragZoom = nextZoom;
-    widget.onZoomChanged(nextZoom);
+    widget.onChange(nextZoom);
     _triggerMajorStopHaptics(from: previousZoom, to: nextZoom);
   }
 
@@ -71,7 +74,7 @@ class _IosCameraZoomDialState extends State<IosCameraZoomDial> {
     final double lower = math.min(from, to);
     final double upper = math.max(from, to);
 
-    for (final double stop in widget.majorStops) {
+    for (final double stop in _majorStops) {
       if (stop <= lower || stop >= upper) continue;
       HapticFeedback.selectionClick();
     }
@@ -89,14 +92,18 @@ class _IosCameraZoomDialState extends State<IosCameraZoomDial> {
           final Offset arcCenter = Offset(width / 2, widget.height + radius * 0.42);
           final double bgRadius = radius + _ZoomDialMetrics.backgroundExtraRadius;
 
+          final bool canDrag = widget.maxZoom > widget.minZoom;
+
           return GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onHorizontalDragStart: (_) => _onHorizontalDragStart(),
-            onHorizontalDragEnd: (_) => _onHorizontalDragEnd(),
-            onHorizontalDragCancel: _onHorizontalDragEnd,
-            onHorizontalDragUpdate: (DragUpdateDetails details) {
-              _onHorizontalDrag(details.delta.dx);
-            },
+            onHorizontalDragStart: canDrag ? (_) => _onHorizontalDragStart() : null,
+            onHorizontalDragEnd: canDrag ? (_) => _onHorizontalDragEnd() : null,
+            onHorizontalDragCancel: canDrag ? _onHorizontalDragEnd : null,
+            onHorizontalDragUpdate: canDrag
+                ? (DragUpdateDetails details) {
+                    _onHorizontalDrag(details.delta.dx);
+                  }
+                : null,
             child: Stack(
               clipBehavior: Clip.none,
               alignment: Alignment.topCenter,
@@ -122,7 +129,7 @@ class _IosCameraZoomDialState extends State<IosCameraZoomDial> {
                     zoom: _clampedZoom,
                     minZoom: widget.minZoom,
                     maxZoom: widget.maxZoom,
-                    majorStops: widget.majorStops,
+                    majorStops: _majorStops,
                     arcCenter: arcCenter,
                     radius: radius,
                     labelProximity: _labelProximity,
@@ -146,6 +153,29 @@ class _ZoomDialMetrics {
   static const double bgTopPadding = 12;
   static const double backgroundExtraRadius =
       caretLift + caretHeight + bgTopPadding;
+
+  static const List<double> _presetMajorStops = [
+    0.5,
+    1.0,
+    2.0,
+    3.0,
+    5.0,
+    10.0,
+    15.0,
+  ];
+
+  /// Major ruler labels within [minZoom, maxZoom].
+  static List<double> majorStopsForRange(double minZoom, double maxZoom) {
+    final List<double> stops = _presetMajorStops
+        .where((double stop) => stop >= minZoom - 0.001 && stop <= maxZoom + 0.001)
+        .toList();
+
+    if (stops.isNotEmpty) return stops;
+
+    if (minZoom == maxZoom) return [minZoom];
+
+    return [minZoom, maxZoom];
+  }
 }
 
 class _IosZoomDialFormat {

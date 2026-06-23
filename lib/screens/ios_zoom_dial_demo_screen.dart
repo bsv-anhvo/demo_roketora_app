@@ -15,8 +15,6 @@ class IosZoomDialDemoScreen extends StatefulWidget {
 class _IosZoomDialDemoScreenState extends State<IosZoomDialDemoScreen> {
   double _zoom = 1.0;
 
-  static const List<double> _majorStops = [0.5, 1.0, 2.0, 3.0, 5.0, 15.0];
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -33,11 +31,10 @@ class _IosZoomDialDemoScreenState extends State<IosZoomDialDemoScreen> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: IosCameraZoomDial(
-                    zoom: _zoom,
+                    currentZoom: _zoom,
                     minZoom: 0.5,
                     maxZoom: 15.0,
-                    majorStops: _majorStops,
-                    onZoomChanged: (double value) => setState(() => _zoom = value),
+                    onChange: (double value) => setState(() => _zoom = value),
                   ),
                 ),
                 const Gap(12),
