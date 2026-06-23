@@ -37,20 +37,13 @@ class _IosCameraZoomDialState extends State<IosCameraZoomDial> {
   static const double _labelProximity = 0.07;
 
   double? _dragZoom;
+  int? _activePointer;
 
   List<double> get _majorStops =>
       _ZoomDialMetrics.majorStopsForRange(widget.minZoom, widget.maxZoom);
 
   double get _clampedZoom =>
       widget.currentZoom.clamp(widget.minZoom, widget.maxZoom);
-
-  void _onHorizontalDragStart() {
-    _dragZoom = _clampedZoom;
-  }
-
-  void _onHorizontalDragEnd() {
-    _dragZoom = null;
-  }
 
   void _onHorizontalDrag(double deltaX) {
     final double previousZoom = _dragZoom ?? _clampedZoom;
@@ -80,68 +73,117 @@ class _IosCameraZoomDialState extends State<IosCameraZoomDial> {
     }
   }
 
+  void _onPointerDown(PointerDownEvent event) {
+    if (widget.maxZoom <= widget.minZoom) return;
+    _activePointer = event.pointer;
+    _dragZoom = _clampedZoom;
+  }
+
+  void _onPointerMove(PointerMoveEvent event) {
+    if (widget.maxZoom <= widget.minZoom) return;
+    if (_activePointer != event.pointer) return;
+    _onHorizontalDrag(event.delta.dx);
+  }
+
+  void _onPointerEnd(PointerEvent event) {
+    if (_activePointer != event.pointer) return;
+    _activePointer = null;
+    _dragZoom = null;
+  }
+
+  _ZoomDialLayout _layoutForWidth(double width) {
+    final double radius = width * 0.72;
+    final double bgRadius = radius + _ZoomDialMetrics.backgroundExtraRadius;
+    final double arcCenterY = widget.height + radius * 0.42;
+    final double topInset = math.max(
+      0,
+      bgRadius -
+          arcCenterY +
+          _ZoomDialMetrics.caretHeight +
+          _ZoomDialMetrics.caretLift,
+    );
+
+    return _ZoomDialLayout(
+      width: width,
+      dialHeight: widget.height + topInset,
+      radius: radius,
+      bgRadius: bgRadius,
+      arcCenter: Offset(width / 2, arcCenterY + topInset),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: widget.height,
-      width: double.infinity,
-      child: LayoutBuilder(
-        builder: (BuildContext context, BoxConstraints constraints) {
-          final double width = constraints.maxWidth;
-          final double radius = width * 0.72;
-          final Offset arcCenter = Offset(width / 2, widget.height + radius * 0.42);
-          final double bgRadius = radius + _ZoomDialMetrics.backgroundExtraRadius;
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final _ZoomDialLayout layout = _layoutForWidth(constraints.maxWidth);
+        final bool canDrag = widget.maxZoom > widget.minZoom;
 
-          final bool canDrag = widget.maxZoom > widget.minZoom;
-
-          return GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onHorizontalDragStart: canDrag ? (_) => _onHorizontalDragStart() : null,
-            onHorizontalDragEnd: canDrag ? (_) => _onHorizontalDragEnd() : null,
-            onHorizontalDragCancel: canDrag ? _onHorizontalDragEnd : null,
-            onHorizontalDragUpdate: canDrag
-                ? (DragUpdateDetails details) {
-                    _onHorizontalDrag(details.delta.dx);
-                  }
-                : null,
-            child: Stack(
-              clipBehavior: Clip.none,
-              alignment: Alignment.topCenter,
-              children: [
-                if (widget.showBlur)
-                  Positioned(
-                    left: arcCenter.dx - bgRadius,
-                    top: arcCenter.dy - bgRadius,
-                    width: bgRadius * 2,
-                    height: bgRadius * 2,
-                    child: ClipOval(
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                        child: Container(
-                          color: AppColors.colorBlackOpacity60,
-                        ),
+        return SizedBox(
+          height: layout.dialHeight,
+          width: layout.width,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              if (widget.showBlur)
+                Positioned(
+                  left: layout.arcCenter.dx - layout.bgRadius,
+                  top: layout.arcCenter.dy - layout.bgRadius,
+                  width: layout.bgRadius * 2,
+                  height: layout.bgRadius * 2,
+                  child: ClipOval(
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                      child: Container(
+                        color: AppColors.colorBlackOpacity60,
                       ),
                     ),
                   ),
-                CustomPaint(
-                  size: Size(width, widget.height),
-                  painter: _ZoomDialTicksPainter(
-                    zoom: _clampedZoom,
-                    minZoom: widget.minZoom,
-                    maxZoom: widget.maxZoom,
-                    majorStops: _majorStops,
-                    arcCenter: arcCenter,
-                    radius: radius,
-                    labelProximity: _labelProximity,
+                ),
+              CustomPaint(
+                size: Size(layout.width, layout.dialHeight),
+                painter: _ZoomDialTicksPainter(
+                  zoom: _clampedZoom,
+                  minZoom: widget.minZoom,
+                  maxZoom: widget.maxZoom,
+                  majorStops: _majorStops,
+                  arcCenter: layout.arcCenter,
+                  radius: layout.radius,
+                  labelProximity: _labelProximity,
+                ),
+              ),
+              if (canDrag)
+                Positioned.fill(
+                  child: Listener(
+                    behavior: HitTestBehavior.opaque,
+                    onPointerDown: _onPointerDown,
+                    onPointerMove: _onPointerMove,
+                    onPointerUp: _onPointerEnd,
+                    onPointerCancel: _onPointerEnd,
                   ),
                 ),
-              ],
-            ),
-          );
-        },
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
+}
+
+class _ZoomDialLayout {
+  const _ZoomDialLayout({
+    required this.width,
+    required this.dialHeight,
+    required this.radius,
+    required this.bgRadius,
+    required this.arcCenter,
+  });
+
+  final double width;
+  final double dialHeight;
+  final double radius;
+  final double bgRadius;
+  final Offset arcCenter;
 }
 
 class _ZoomDialMetrics {
