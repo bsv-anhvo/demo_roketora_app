@@ -310,6 +310,18 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
     );
   }
 
+  OnPreviewTap _buildPreviewTap(CameraState state) {
+    final OnPreviewTap baseTap = CameraHelper.cameraBuildPreviewTap(state);
+    return OnPreviewTap(
+      onTap: (position, flutterPreviewSize, pixelPreviewSize) {
+        cameraHost.applyExposure(CameraUiState.defaultExposure);
+        baseTap.onTap(position, flutterPreviewSize, pixelPreviewSize);
+      },
+      onTapPainter: baseTap.onTapPainter,
+      tapPainterDuration: baseTap.tapPainterDuration,
+    );
+  }
+
   Widget _buildPreviewDecorator(CameraState state, AnalysisPreview preview) {
     final bool useViewportMask = _usesViewportContain;
 
@@ -354,7 +366,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
       ),
       availableFilters: cameraPresetFilters,
       onPreviewScaleBuilder: (_) => OnPreviewScale(onScale: (_) {}),
-      onPreviewTapBuilder: CameraHelper.cameraBuildPreviewTap,
+      onPreviewTapBuilder: _buildPreviewTap,
       onMediaCaptureEvent: (event) => handleCaptureEvent(context, event),
       topActionsBuilder: (state) {
         state.when(
