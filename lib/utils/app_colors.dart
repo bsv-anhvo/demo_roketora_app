@@ -23,5 +23,5 @@ class AppColors {
   static const Color color229_57_53 = Color(0xFFE53935);
   static const Color color30_30_30 = Color(0xFF1E1E1E);
 
-  static const Color color58_58_60_opacity_70 = Color(0xB33A3A3C);
+  static const Color color58_58_60_op70 = Color(0xB33A3A3C);
 }

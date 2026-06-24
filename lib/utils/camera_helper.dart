@@ -140,14 +140,18 @@ class CameraHelper {
     return range.displayMin;
   }
 
-  static String formatZoomLabel(double zoom, {required bool compact}) {
-    if ((zoom - zoom.round()).abs() < 0.05) {
-      final int rounded = zoom.round();
+  static String formatZoomLabel(double zoom, double displayZoom, {required bool compact}) {
+    const double epsilon = 0.001;
+    final double value =
+        (zoom - displayZoom).abs() < epsilon ? zoom : displayZoom;
+
+    if ((value - value.round()).abs() < 0.05) {
+      final int rounded = value.round();
       return compact ? '$rounded' : '$rounded×';
     }
 
-    final String value = zoom.toStringAsFixed(1);
-    return compact ? value : '$value×';
+    final String formatted = value.toStringAsFixed(1);
+    return compact ? formatted : '$formatted×';
   }
 
   static Future<ZoomRange> cameraZoomLoad() async {
