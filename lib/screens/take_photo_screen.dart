@@ -204,7 +204,6 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           buildZoomSelector(state),
-          const Gap(16),
           buildCaptureRow(
             state,
             AppCameraCaptureButton(

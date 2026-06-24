@@ -4,7 +4,6 @@ import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:demo_roketota_app/core/extensions/context_extension.dart';
 import 'package:demo_roketota_app/core/extensions/snack_bar_extension.dart';
 import 'package:demo_roketota_app/core/models/camera_settings.dart';
-import 'package:demo_roketota_app/core/models/zoom_range.dart';
 import 'package:demo_roketota_app/providers/camera/camera_ui_actions_mixin.dart';
 import 'package:demo_roketota_app/providers/camera/camera_ui_state.dart';
 import 'package:demo_roketota_app/screens/photo_preview_screen.dart';
@@ -311,14 +310,6 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
     );
   }
 
-  void _applyPinchDisplayZoom(CameraState state, double displayZoom) {
-    final ZoomRange range = cameraUi.zoomRange;
-    final ({double display, double normalized}) resolved =
-        CameraHelper.resolveDisplayZoom(range, displayZoom);
-    state.sensorConfig.setZoom(resolved.normalized);
-    cameraHost.setDisplayZoom(resolved.display);
-  }
-
   Widget _buildPreviewDecorator(CameraState state, AnalysisPreview preview) {
     final bool useViewportMask = _usesViewportContain;
 
@@ -333,7 +324,8 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
         BoundedPinchZoomOverlay(
           range: cameraUi.zoomRange,
           displayZoom: cameraUi.displayZoom,
-          onDisplayZoom: (zoom) => _applyPinchDisplayZoom(state, zoom),
+          onDisplayZoom: (zoom) =>
+              cameraHost.applyZoom(state.sensorConfig, zoom),
         ),
       ],
     );

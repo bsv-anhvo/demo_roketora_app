@@ -21,6 +21,8 @@ abstract interface class CameraUiHost {
 
 /// Shared camera UI mutations for photo and video notifiers.
 mixin CameraUiActions<S> on AutoDisposeNotifier<S> implements CameraUiHost {
+  Future<void>? _zoomApplyChain;
+
   @override
   CameraUiState get cameraUi;
   set cameraUi(CameraUiState value);
@@ -90,26 +92,29 @@ mixin CameraUiActions<S> on AutoDisposeNotifier<S> implements CameraUiHost {
   }
 
   @override
-  Future<void> applyZoom(SensorConfig sensorConfig, double zoom) async {
-    final double clamped = await CameraHelper.applyDisplayZoom(
-      sensorConfig: sensorConfig,
-      range: cameraUi.zoomRange,
-      displayZoom: zoom,
-    );
-    setDisplayZoom(clamped);
+  Future<void> applyZoom(SensorConfig sensorConfig, double zoom) {
+    _zoomApplyChain = (_zoomApplyChain ?? Future<void>.value()).then((_) async {
+      final double clamped = await CameraHelper.applyDisplayZoom(
+        sensorConfig: sensorConfig,
+        range: cameraUi.zoomRange,
+        displayZoom: zoom,
+      );
+      setDisplayZoom(clamped);
+    });
+    return _zoomApplyChain!;
   }
 
   @override
   Future<void> refreshZoomRange(CameraState state) async {
     final ZoomRange range = await CameraHelper.cameraZoomLoad();
-    final double initialZoom = CameraHelper.defaultDisplayZoom(range);
+    final double zoomToApply = range.clampDisplayZoom(cameraUi.displayZoom);
 
     cameraUi = cameraUi.copyWith(
       zoomRange: range,
-      displayZoom: initialZoom,
+      displayZoom: zoomToApply,
     );
 
-    await applyZoom(state.sensorConfig, initialZoom);
+    await applyZoom(state.sensorConfig, zoomToApply);
   }
 
   @override
