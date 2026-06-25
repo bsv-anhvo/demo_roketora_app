@@ -98,16 +98,22 @@ class CameraHelper {
   }
 
   static List<double> cameraZoomBuildStops(ZoomRange range) {
-    if (range.displayMin == range.displayMax) {
+    const double epsilon = 0.01;
+    // Stops only go up to the preset cap; pinch beyond it is reflected on the
+    // active stop label instead of adding more stops.
+    final double stopMax = range.displayMax < Constants.desiredMax
+        ? range.displayMax
+        : Constants.desiredMax;
+
+    if (range.displayMin >= stopMax - epsilon) {
       return [range.displayMin];
     }
 
-    const double epsilon = 0.01;
     const List<double> candidates = [1.0, 2.0];
     final List<double> stops = [range.displayMin];
 
     for (final double value in candidates) {
-      if (value < range.displayMin - epsilon || value > range.displayMax + epsilon) {
+      if (value < range.displayMin - epsilon || value > stopMax + epsilon) {
         continue;
       }
       if (stops.any((stop) => (stop - value).abs() < epsilon)) {
@@ -116,8 +122,8 @@ class CameraHelper {
       stops.add(value);
     }
 
-    if (!stops.any((stop) => (stop - range.displayMax).abs() < epsilon)) {
-      stops.add(range.displayMax);
+    if (!stops.any((stop) => (stop - stopMax).abs() < epsilon)) {
+      stops.add(stopMax);
     }
 
     return stops;
@@ -173,8 +179,8 @@ class CameraHelper {
       final double opticalMax = nativeMaxZoom;
       final double displayMin =
           Constants.desiredMin.clamp(opticalMin, opticalMax);
-      final double displayMax =
-          Constants.desiredMax.clamp(opticalMin, opticalMax);
+      // Use the device's maximum optical zoom as display max.
+      final double displayMax = opticalMax;
 
       'Camera zoom optical range: $opticalMin - $opticalMax, '
               'display: $displayMin - $displayMax, iosCurve: $useIosZoomCurve'

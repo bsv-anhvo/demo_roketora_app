@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:developer';
 
+import 'package:demo_roketota_app/core/extensions/logger_extension.dart';
 import 'package:demo_roketota_app/core/models/zoom_range.dart';
 import 'package:demo_roketota_app/utils/app_colors.dart';
 import 'package:demo_roketota_app/utils/camera_helper.dart';
@@ -150,8 +152,7 @@ class _IosStyleZoomSelectorState extends State<IosStyleZoomSelector> {
   @override
   Widget build(BuildContext context) {
     final List<double> stops = CameraHelper.cameraZoomBuildStops(widget.range);
-    final double activeStop =
-        CameraHelper.cameraZoomClosestStop(widget.displayZoom, stops);
+    final double activeStop = CameraHelper.cameraZoomClosestStop(widget.displayZoom, stops);
 
     return Center(
       child: Listener(
@@ -166,8 +167,8 @@ class _IosStyleZoomSelectorState extends State<IosStyleZoomSelector> {
                 child: IosCameraZoomDial(
                   key: _dialKey,
                   currentZoom: widget.displayZoom,
-                  minZoom: stops.first,
-                  maxZoom: stops.last,
+                  minZoom: widget.range.displayMin,
+                  maxZoom: widget.range.displayMax,
                   onChange: widget.onZoomSelected,
                   enableInternalGestures: false,
                 ),
