@@ -37,6 +37,9 @@ class _IosStyleZoomSelectorState extends State<IosStyleZoomSelector> {
   int? _pressedStopIndex;
   Offset? _downGlobalPosition;
 
+  final GlobalKey<IosCameraZoomDialState> _dialKey =
+      GlobalKey<IosCameraZoomDialState>();
+
   @override
   void dispose() {
     _hideDialTimer?.cancel();
@@ -68,23 +71,36 @@ class _IosStyleZoomSelectorState extends State<IosStyleZoomSelector> {
 
   void _onPointerDown(PointerDownEvent event) {
     _hideDialTimer?.cancel();
-    if (!_showDial) {
-      _trackingPointer = event.pointer;
-      _hasMoved = false;
-      _pressedStopIndex = null;
-      _downGlobalPosition = event.position;
+    _trackingPointer = event.pointer;
 
-      final List<double> stops = CameraHelper.cameraZoomBuildStops(widget.range);
-      final double activeStop = CameraHelper.cameraZoomClosestStop(
-        widget.displayZoom,
-        stops,
-      );
-      _pressedStopIndex = _stopIndexAt(event.localPosition, stops, activeStop);
+    if (_showDial) {
+      // Dial already visible: this press starts a new drag on it.
+      _dialKey.currentState?.beginDrag();
+      return;
     }
+
+    _hasMoved = false;
+    _pressedStopIndex = null;
+    _downGlobalPosition = event.position;
+
+    final List<double> stops = CameraHelper.cameraZoomBuildStops(widget.range);
+    final double activeStop = CameraHelper.cameraZoomClosestStop(
+      widget.displayZoom,
+      stops,
+    );
+    _pressedStopIndex = _stopIndexAt(event.localPosition, stops, activeStop);
   }
 
   void _onPointerMove(PointerMoveEvent event) {
-    if (_showDial || _trackingPointer != event.pointer || _hasMoved) return;
+    if (_trackingPointer != event.pointer) return;
+
+    // Dial is showing: forward the drag so it keeps adjusting the zoom level.
+    if (_showDial) {
+      _dialKey.currentState?.updateDrag(event.delta.dx);
+      return;
+    }
+
+    if (_hasMoved) return;
 
     final Offset? downPosition = _downGlobalPosition;
     if (downPosition == null) return;
@@ -93,6 +109,12 @@ class _IosStyleZoomSelectorState extends State<IosStyleZoomSelector> {
     _hasMoved = true;
     _pressedStopIndex = null;
     setState(() => _showDial = true);
+
+    // The dial is built on this frame; start its drag right after so the
+    // ongoing gesture seamlessly continues controlling the zoom.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _dialKey.currentState?.beginDrag();
+    });
   }
 
   void _onPointerUp(PointerEvent event) {
@@ -105,6 +127,9 @@ class _IosStyleZoomSelectorState extends State<IosStyleZoomSelector> {
       _trackingPointer = null;
       _pressedStopIndex = null;
       _downGlobalPosition = null;
+      if (_showDial) {
+        _dialKey.currentState?.endDrag();
+      }
     }
     if (_showDial) {
       _scheduleHideDial();
@@ -139,10 +164,12 @@ class _IosStyleZoomSelectorState extends State<IosStyleZoomSelector> {
             ? Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: IosCameraZoomDial(
+                  key: _dialKey,
                   currentZoom: widget.displayZoom,
                   minZoom: stops.first,
                   maxZoom: stops.last,
                   onChange: widget.onZoomSelected,
+                  enableInternalGestures: false,
                 ),
               )
             : Container(

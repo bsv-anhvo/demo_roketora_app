@@ -18,6 +18,7 @@ class IosCameraZoomDial extends StatefulWidget {
     required this.onChange,
     this.showBlur = true,
     this.height = 132,
+    this.enableInternalGestures = true,
   })  : assert(minZoom > 0, 'minZoom must be positive for log-scale ruler'),
         assert(maxZoom >= minZoom, 'maxZoom must be >= minZoom');
 
@@ -28,11 +29,16 @@ class IosCameraZoomDial extends StatefulWidget {
   final bool showBlur;
   final double height;
 
+  /// When false, the dial does not listen for its own pointer events and must
+  /// be driven externally via [IosCameraZoomDialState.beginDrag],
+  /// [IosCameraZoomDialState.updateDrag] and [IosCameraZoomDialState.endDrag].
+  final bool enableInternalGestures;
+
   @override
-  State<IosCameraZoomDial> createState() => _IosCameraZoomDialState();
+  State<IosCameraZoomDial> createState() => IosCameraZoomDialState();
 }
 
-class _IosCameraZoomDialState extends State<IosCameraZoomDial> {
+class IosCameraZoomDialState extends State<IosCameraZoomDial> {
   static const double _dragSensitivity = 0.0045;
   static const double _labelProximity = 0.07;
 
@@ -71,6 +77,23 @@ class _IosCameraZoomDialState extends State<IosCameraZoomDial> {
       if (stop <= lower || stop >= upper) continue;
       HapticFeedback.selectionClick();
     }
+  }
+
+  /// Starts an externally driven drag (parent owns the pointer).
+  void beginDrag() {
+    if (widget.maxZoom <= widget.minZoom) return;
+    _dragZoom = _clampedZoom;
+  }
+
+  /// Applies an externally driven horizontal drag delta.
+  void updateDrag(double deltaX) {
+    if (widget.maxZoom <= widget.minZoom) return;
+    _onHorizontalDrag(deltaX);
+  }
+
+  /// Ends an externally driven drag.
+  void endDrag() {
+    _dragZoom = null;
   }
 
   void _onPointerDown(PointerDownEvent event) {
@@ -152,7 +175,7 @@ class _IosCameraZoomDialState extends State<IosCameraZoomDial> {
                   labelProximity: _labelProximity,
                 ),
               ),
-              if (canDrag)
+              if (canDrag && widget.enableInternalGestures)
                 Positioned.fill(
                   child: Listener(
                     behavior: HitTestBehavior.opaque,
