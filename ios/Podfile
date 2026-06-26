@@ -43,6 +43,14 @@ post_install do |installer|
         
         # Exclude arm64 for simulator
         config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = ''
+
+        # Enable permissions used by the app (permission_handler).
+        # Without these macros the plugin defaults them to 0 and always returns denied.
+        config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= ['$(inherited)']
+        config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] += [
+          'PERMISSION_CAMERA=1',
+          'PERMISSION_MICROPHONE=1',
+        ]
     end
   end
 end
