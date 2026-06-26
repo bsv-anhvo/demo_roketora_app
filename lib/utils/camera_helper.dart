@@ -3,6 +3,7 @@ import 'dart:io' show Platform;
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:camerawesome/pigeon.dart';
 import 'package:demo_roketota_app/core/extensions/logger_extension.dart';
+import 'package:demo_roketota_app/core/extensions/snack_bar_extension.dart';
 import 'package:demo_roketota_app/core/models/zoom_range.dart';
 import 'package:demo_roketota_app/utils/constants.dart';
 import 'package:demo_roketota_app/widgets/camera/camera_focus_indicator.dart';
@@ -161,25 +162,34 @@ class CameraHelper {
   }
 
   static Future<ZoomRange> cameraZoomLoad() async {
+    final bool useIosZoomCurve = !kIsWeb && Platform.isIOS;
     try {
-      final double? nativeMin = await CamerawesomePlugin.getMinZoom();
       final double? nativeMaxZoom = await CamerawesomePlugin.getMaxZoom();
+
+      // iOS getMinZoom() returns the int literal 0, which the plugin's pigeon
+      // layer fails to cast to double and throws on. iOS optical min is always
+      // 1x anyway, so skip the call there and only read it on Android.
+      final double? nativeMin =
+          useIosZoomCurve ? null : await CamerawesomePlugin.getMinZoom();
 
       'Camera zoom native range: $nativeMin - $nativeMaxZoom'.log();
 
-      if (nativeMin == null || nativeMaxZoom == null || nativeMaxZoom <= 0) {
+      if (nativeMaxZoom == null || nativeMaxZoom <= 0) {
+        return Constants.fallbackRange;
+      }
+      if (!useIosZoomCurve && nativeMin == null) {
         return Constants.fallbackRange;
       }
 
-      final bool useIosZoomCurve = !kIsWeb && Platform.isIOS;
       // iOS getMinZoom() returns 0 but optical min is 1x; Android uses minZoomRatio.
       final double opticalMin = useIosZoomCurve
           ? 1.0
-          : (nativeMin <= 0 ? 1.0 : nativeMin);
+          : (nativeMin! <= 0 ? 1.0 : nativeMin);
       final double opticalMax = nativeMaxZoom;
       final double displayMin =
           Constants.desiredMin.clamp(opticalMin, opticalMax);
-      // Use the device's maximum optical zoom as display max.
+      // Pinch can reach the device's real max on both platforms; the preset
+      // stops are still capped to desiredMax in cameraZoomBuildStops().
       final double displayMax = opticalMax;
 
       'Camera zoom optical range: $opticalMin - $opticalMax, '
@@ -193,7 +203,8 @@ class CameraHelper {
         deviceMax: opticalMax,
         useIosZoomCurve: useIosZoomCurve,
       );
-    } catch (_) {
+    } catch (e) {
+      'Camera zoom load failed: $e'.log();
       return Constants.fallbackRange;
     }
   }
