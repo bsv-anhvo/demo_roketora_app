@@ -12,36 +12,26 @@ class CameraControlPanel extends StatelessWidget {
     required this.isPhotoMode,
     required this.flash,
     required this.timer,
-    required this.portraitEnabled,
-    required this.exposure,
     required this.onFlashTap,
     required this.onTimerTap,
-    required this.onPortraitTap,
     required this.onExposureChanged,
     required this.onResolutionTap,
     this.resolutionLabel,
     this.onFpsTap,
     this.fpsLabel,
     this.resolutionIcon,
-    this.showExposureSlider = false,
     this.showFilterStrip = false,
-    this.onToggleExposure,
     this.onToggleFilter,
   });
 
   final bool isPhotoMode;
   final FlashSetting flash;
   final PhotoTimerOption timer;
-  final bool portraitEnabled;
-  final double exposure;
   final String? resolutionLabel;
   final String? fpsLabel;
-  final bool showExposureSlider;
   final bool showFilterStrip;
   final VoidCallback onFlashTap;
   final VoidCallback onTimerTap;
-  final VoidCallback onPortraitTap;
-  final VoidCallback? onToggleExposure;
   final VoidCallback? onToggleFilter;
   final ValueChanged<double> onExposureChanged;
   final VoidCallback onResolutionTap;
@@ -54,13 +44,6 @@ class CameraControlPanel extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (showExposureSlider) ...[
-          _ExposureSlider(
-            value: exposure,
-            onChanged: onExposureChanged,
-          ),
-          const Gap(8),
-        ],
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
@@ -69,12 +52,6 @@ class CameraControlPanel extends StatelessWidget {
                 icon: _flashIcon(flash),
                 label: flash.label,
                 onTap: onFlashTap,
-              ),
-              _ControlChip(
-                icon: Icons.brightness_6_outlined,
-                label: Strings.labelExposure,
-                isActive: showExposureSlider,
-                onTap: onToggleExposure ?? () {},
               ),
               _ControlChip(
                 icon: Icons.auto_awesome_outlined,
@@ -88,12 +65,6 @@ class CameraControlPanel extends StatelessWidget {
                   label: timer.label,
                   onTap: onTimerTap,
                 ),
-                // _ControlChip(
-                //   icon: Icons.face_retouching_natural_outlined,
-                //   label: Strings.labelPortrait,
-                //   isActive: portraitEnabled,
-                //   onTap: onPortraitTap,
-                // ),
               ],
               _ControlChip(
                 icon: resolutionIcon ??
@@ -163,51 +134,6 @@ class _ControlChip extends StatelessWidget {
       ),
     );
   }
-}
-
-class _ExposureSlider extends StatelessWidget {
-  const _ExposureSlider({
-    required this.value,
-    required this.onChanged,
-  });
-
-  final double value;
-  final ValueChanged<double> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.black45,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.exposure, color: AppColors.white, size: 18),
-          Expanded(
-            child: Slider(
-              value: value,
-              min: 0,
-              max: 1,
-              activeColor: AppColors.amber,
-              onChanged: onChanged,
-            ),
-          ),
-          Text(
-            _formatExposureOffset(value),
-            style: const TextStyle(color: AppColors.white70, fontSize: 12),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-String _formatExposureOffset(double value) {
-  final int offset = ((value - 0.5) * 200).round();
-  if (offset == 0) return '0';
-  return offset > 0 ? '+$offset' : '$offset';
 }
 
 Future<T?> showCameraPickerSheet<T>({

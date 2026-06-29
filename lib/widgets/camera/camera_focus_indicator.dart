@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 /// Tap-to-focus frame with an iOS-style vertical exposure slider on its side.
 ///
 /// The focus frame is non-interactive while the sun handle can be dragged
-/// vertically to change exposure. Each new tap rebuilds this widget, so
-/// [exposure] resets to its default and the handle re-centers.
+/// vertically to change exposure. The State is reused across taps, so
+/// [didUpdateWidget] re-syncs the handle to [exposure] on each new tap.
 class CameraFocusIndicator extends StatefulWidget {
   const CameraFocusIndicator({
     super.key,
@@ -38,6 +38,18 @@ class _CameraFocusIndicatorState extends State<CameraFocusIndicator> {
   static const double _edgePadding = 8;
 
   late double _exposure = widget.exposure.clamp(0.0, 1.0);
+
+  @override
+  void didUpdateWidget(CameraFocusIndicator oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // The State is reused across taps (same type, no key). A new tap means a
+    // new focus point, which always resets exposure to neutral, so re-sync the
+    // local value whenever the tap position or the incoming exposure changes.
+    if (widget.position != oldWidget.position ||
+        widget.exposure != oldWidget.exposure) {
+      _exposure = widget.exposure.clamp(0.0, 1.0);
+    }
+  }
 
   void _onDragUpdate(DragUpdateDetails details) {
     // Drag up brightens, drag down darkens. Full track maps to [0, 1].

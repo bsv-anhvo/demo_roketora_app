@@ -1,5 +1,4 @@
 import 'package:camerawesome/camerawesome_plugin.dart';
-import 'package:camerawesome/pigeon.dart';
 import 'package:demo_roketota_app/bases/base_camera_screen.dart';
 import 'package:demo_roketota_app/core/extensions/snack_bar_extension.dart';
 import 'package:demo_roketota_app/core/models/camera_settings.dart';
@@ -165,27 +164,15 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
             isPhotoMode: true,
             flash: ui.flash,
             timer: photo.timer,
-            portraitEnabled: photo.portraitEnabled,
-            exposure: ui.exposure,
-            showExposureSlider: ui.showExposureSlider,
             showFilterStrip: ui.showFilterStrip,
             resolutionLabel: photo.selectedPhotoAspectRatio.label,
             onFlashTap: () {
               _notifier.setFlash(ui.flash.next);
               _notifier.applyFlash(state.sensorConfig);
             },
-            onToggleExposure: _notifier.toggleExposureSlider,
             onToggleFilter: _notifier.toggleFilterStrip,
             onExposureChanged: (value) => _notifier.applyExposure(value),
             onTimerTap: () => _notifier.setTimer(photo.timer.next),
-            onPortraitTap: () async {
-              _notifier.setPortraitEnabled(!photo.portraitEnabled);
-              if (_photoState.portraitEnabled) {
-                await _notifier.applyPortraitMode(state);
-              } else {
-                await _notifier.resetPortraitLens(state);
-              }
-            },
             onResolutionTap: () => pickPhotoAspectRatio(state),
           ),
         ),

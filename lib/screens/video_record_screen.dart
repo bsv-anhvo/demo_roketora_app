@@ -314,9 +314,6 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
             isPhotoMode: false,
             flash: ui.flash,
             timer: PhotoTimerOption.off,
-            portraitEnabled: false,
-            exposure: ui.exposure,
-            showExposureSlider: ui.showExposureSlider,
             showFilterStrip: ui.showFilterStrip,
             resolutionLabel: video.videoQuality.label,
             fpsLabel: video.videoFps.label,
@@ -324,11 +321,9 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
               _notifier.setFlash(ui.flash.next);
               _notifier.applyFlash(state.sensorConfig);
             },
-            onToggleExposure: _notifier.toggleExposureSlider,
             onToggleFilter: _notifier.toggleFilterStrip,
             onExposureChanged: (value) => _notifier.applyExposure(value),
             onTimerTap: () {},
-            onPortraitTap: () {},
             onResolutionTap: pickVideoQuality,
             onFpsTap: pickVideoFps,
           ),
