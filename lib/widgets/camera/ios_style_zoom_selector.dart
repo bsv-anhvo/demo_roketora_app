@@ -27,6 +27,7 @@ class IosStyleZoomSelector extends StatefulWidget {
 
 class _IosStyleZoomSelectorState extends State<IosStyleZoomSelector> {
   static const Duration _dialHideDelay = Duration(seconds: 1);
+  static const Duration _longPressDelay = Duration(milliseconds: 350);
   static const double _stopSpacing = 2;
   static const double _barPadding = 4;
   static const double _selectedStopSize = 40;
@@ -34,6 +35,7 @@ class _IosStyleZoomSelectorState extends State<IosStyleZoomSelector> {
 
   bool _showDial = false;
   Timer? _hideDialTimer;
+  Timer? _longPressTimer;
   int? _trackingPointer;
   bool _hasMoved = false;
   int? _pressedStopIndex;
@@ -45,6 +47,7 @@ class _IosStyleZoomSelectorState extends State<IosStyleZoomSelector> {
   @override
   void dispose() {
     _hideDialTimer?.cancel();
+    _longPressTimer?.cancel();
     super.dispose();
   }
 
@@ -86,11 +89,29 @@ class _IosStyleZoomSelectorState extends State<IosStyleZoomSelector> {
     _downGlobalPosition = event.position;
 
     final List<double> stops = CameraHelper.cameraZoomBuildStops(widget.range);
-    final double activeStop = CameraHelper.cameraZoomClosestStop(
+    final double activeStop = CameraHelper.cameraZoomActiveStop(
       widget.displayZoom,
       stops,
     );
     _pressedStopIndex = _stopIndexAt(event.localPosition, stops, activeStop);
+
+    // Long press (without moving) also reveals the dial.
+    _longPressTimer?.cancel();
+    _longPressTimer = Timer(_longPressDelay, _showDialFromLongPress);
+  }
+
+  void _showDialFromLongPress() {
+    if (!mounted || _showDial || _hasMoved) return;
+
+    _hasMoved = true;
+    _pressedStopIndex = null;
+    setState(() => _showDial = true);
+
+    // Begin a drag once the dial is laid out so an immediate finger move keeps
+    // adjusting the zoom seamlessly.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _dialKey.currentState?.beginDrag();
+    });
   }
 
   void _onPointerMove(PointerMoveEvent event) {
@@ -108,6 +129,8 @@ class _IosStyleZoomSelectorState extends State<IosStyleZoomSelector> {
     if (downPosition == null) return;
     if ((event.position - downPosition).distance < kTouchSlop) return;
 
+    // Real movement detected: switch to drag mode instead of long press.
+    _longPressTimer?.cancel();
     _hasMoved = true;
     _pressedStopIndex = null;
     setState(() => _showDial = true);
@@ -120,6 +143,7 @@ class _IosStyleZoomSelectorState extends State<IosStyleZoomSelector> {
   }
 
   void _onPointerUp(PointerEvent event) {
+    _longPressTimer?.cancel();
     if (_trackingPointer == event.pointer) {
       if (!_hasMoved && !_showDial && _pressedStopIndex != null) {
         final List<double> stops =
@@ -152,7 +176,7 @@ class _IosStyleZoomSelectorState extends State<IosStyleZoomSelector> {
   @override
   Widget build(BuildContext context) {
     final List<double> stops = CameraHelper.cameraZoomBuildStops(widget.range);
-    final double activeStop = CameraHelper.cameraZoomClosestStop(widget.displayZoom, stops);
+    final double activeStop = CameraHelper.cameraZoomActiveStop(widget.displayZoom, stops);
 
     return Center(
       child: Listener(

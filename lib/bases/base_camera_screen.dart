@@ -17,11 +17,15 @@ import 'package:demo_roketota_app/utils/device_requirements.dart';
 import 'package:demo_roketota_app/utils/strings.dart';
 import 'package:demo_roketota_app/widgets/camera/bounded_pinch_zoom_overlay.dart';
 import 'package:demo_roketota_app/widgets/camera/camera_filter_strip.dart';
+import 'package:demo_roketota_app/widgets/camera/camera_focus_indicator.dart';
 import 'package:demo_roketota_app/widgets/camera/ios_style_zoom_selector.dart';
 import 'package:demo_roketota_app/widgets/common/app_top_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+/// How long the tap-to-focus overlay (frame + exposure handle) stays visible.
+const Duration _focusOverlayDuration = Duration(seconds: 4);
 
 /// Base screen for camera experiences (photo / video).
 abstract class CameraScreenBase extends ConsumerStatefulWidget {
@@ -314,11 +318,17 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
     final OnPreviewTap baseTap = CameraHelper.cameraBuildPreviewTap(state);
     return OnPreviewTap(
       onTap: (position, flutterPreviewSize, pixelPreviewSize) {
+        // Re-focusing always resets exposure back to neutral.
         cameraHost.applyExposure(CameraUiState.defaultExposure);
         baseTap.onTap(position, flutterPreviewSize, pixelPreviewSize);
       },
-      onTapPainter: baseTap.onTapPainter,
-      tapPainterDuration: baseTap.tapPainterDuration,
+      onTapPainter: (tapPosition) => CameraFocusIndicator(
+        position: tapPosition,
+        exposure: CameraUiState.defaultExposure,
+        onExposureChanged: (value) => cameraHost.applyExposure(value),
+      ),
+      // Longer than the default so the exposure handle stays draggable.
+      tapPainterDuration: _focusOverlayDuration,
     );
   }
 

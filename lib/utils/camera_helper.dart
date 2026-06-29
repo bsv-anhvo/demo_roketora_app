@@ -139,6 +139,22 @@ class CameraHelper {
     );
   }
 
+  /// Returns the stop that should appear active for [displayZoom] using floor
+  /// semantics: 1.x belongs to the 1x stop, 2.x to the 2x stop, and >=3.0 to
+  /// the 3x stop. Falls back to the first stop when [displayZoom] is below it.
+  static double cameraZoomActiveStop(double displayZoom, List<double> stops) {
+    const double epsilon = 0.001;
+    double active = stops.first;
+    for (final double stop in stops) {
+      if (displayZoom >= stop - epsilon) {
+        active = stop;
+      } else {
+        break;
+      }
+    }
+    return active;
+  }
+
   static double defaultDisplayZoom(ZoomRange range) {
     const double target = 1.0;
     if (target >= range.displayMin && target <= range.displayMax) {
