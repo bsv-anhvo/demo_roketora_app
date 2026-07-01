@@ -6,15 +6,22 @@ import 'package:flutter/material.dart';
 /// The focus frame is non-interactive while the sun handle can be dragged
 /// vertically to change exposure. The State is reused across taps, so
 /// [didUpdateWidget] re-syncs the handle to [exposure] on each new tap.
+///
+/// When drawn inside camerawesome's scaled preview, pass [previewScale] from
+/// [AnalysisPreview.scale] so the overlay keeps a consistent on-screen size.
 class CameraFocusIndicator extends StatefulWidget {
   const CameraFocusIndicator({
     super.key,
     required this.position,
+    this.previewScale = 1.0,
     this.exposure = 0.5,
     this.onExposureChanged,
   });
 
   final Offset position;
+
+  /// Cover/contain scale applied to the preview texture by camerawesome.
+  final double previewScale;
 
   /// Normalized exposure in [0, 1]; 0.5 is neutral.
   final double exposure;
@@ -27,17 +34,23 @@ class CameraFocusIndicator extends StatefulWidget {
 }
 
 class _CameraFocusIndicatorState extends State<CameraFocusIndicator> {
-  static const double _targetSize = 68;
+  static const double _targetSize = 48;
   static const double _cornerLength = 16;
-  static const double _strokeWidth = 2.5;
+  static const double _strokeWidth = 1.5;
 
-  static const double _trackHeight = 150;
+  static const double _trackHeight = 120;
   static const double _sunSize = 26;
   static const double _hitWidth = 44;
   static const double _sliderGap = 10;
   static const double _edgePadding = 8;
 
   late double _exposure = widget.exposure.clamp(0.0, 1.0);
+
+  double get _sizeFactor {
+    final double scale = widget.previewScale;
+    if (scale <= 0) return 1;
+    return 1 / scale;
+  }
 
   @override
   void didUpdateWidget(CameraFocusIndicator oldWidget) {
@@ -52,9 +65,12 @@ class _CameraFocusIndicatorState extends State<CameraFocusIndicator> {
   }
 
   void _onDragUpdate(DragUpdateDetails details) {
-    // Drag up brightens, drag down darkens. Full track maps to [0, 1].
+    // primaryDelta is in preview texture coordinates (inside InteractiveViewer),
+    // so divide by the scaled track height, not the on-screen design height.
+    final double trackHeight = _trackHeight * _sizeFactor;
+    if (trackHeight <= 0) return;
     final double next =
-        (_exposure - details.primaryDelta! / _trackHeight).clamp(0.0, 1.0);
+        (_exposure - details.primaryDelta! / trackHeight).clamp(0.0, 1.0);
     if (next == _exposure) return;
     setState(() => _exposure = next);
     widget.onExposureChanged?.call(_exposure);
@@ -67,19 +83,29 @@ class _CameraFocusIndicatorState extends State<CameraFocusIndicator> {
         final double maxW = constraints.maxWidth;
         final double maxH = constraints.maxHeight;
         final Offset p = widget.position;
+        final double sizeFactor = _sizeFactor;
+
+        final double targetSize = _targetSize * sizeFactor;
+        final double cornerLength = _cornerLength * sizeFactor;
+        final double strokeWidth = _strokeWidth * sizeFactor;
+        final double trackHeight = _trackHeight * sizeFactor;
+        final double sunSize = _sunSize * sizeFactor;
+        final double hitWidth = _hitWidth * sizeFactor;
+        final double sliderGap = _sliderGap * sizeFactor;
+        final double edgePadding = _edgePadding * sizeFactor;
 
         // Prefer the right side; flip to the left when there is no room.
-        final double rightLeft = p.dx + _targetSize / 2 + _sliderGap;
-        final bool placeRight = rightLeft + _hitWidth <= maxW;
+        final double rightLeft = p.dx + targetSize / 2 + sliderGap;
+        final bool placeRight = rightLeft + hitWidth <= maxW;
         final double sliderLeft = placeRight
             ? rightLeft
-            : p.dx - _targetSize / 2 - _sliderGap - _hitWidth;
+            : p.dx - targetSize / 2 - sliderGap - hitWidth;
 
         // Keep the track on screen, centered on the tap when possible.
-        final double maxTop = (maxH - _trackHeight - _edgePadding)
-            .clamp(_edgePadding, double.infinity);
+        final double maxTop = (maxH - trackHeight - edgePadding)
+            .clamp(edgePadding, double.infinity);
         final double trackTop =
-            (p.dy - _trackHeight / 2).clamp(_edgePadding, maxTop);
+            (p.dy - trackHeight / 2).clamp(edgePadding, maxTop);
 
         // Fill the preview so hit-testing reaches the handle. Without an
         // explicit size the Stack collapses around the size-less focus painter
@@ -96,14 +122,15 @@ class _CameraFocusIndicatorState extends State<CameraFocusIndicator> {
                   tween: Tween<double>(begin: 1.25, end: 1.0),
                   duration: const Duration(milliseconds: 220),
                   curve: Curves.easeOutBack,
-                  builder: (_, scale, child) {
+                  builder: (_, anim, child) {
                     return CustomPaint(
                       size: Size(maxW, maxH),
                       painter: _CameraFocusPainter(
                         tapPosition: p,
-                        rectSize: _targetSize * scale,
-                        cornerLength: _cornerLength * scale,
-                        strokeWidth: _strokeWidth,
+                        rectSize: targetSize * anim,
+                        cornerLength: cornerLength * anim,
+                        strokeWidth: strokeWidth,
+                        dotRadius: 3 * sizeFactor,
                         color: AppColors.color255_213_79,
                       ),
                     );
@@ -112,17 +139,17 @@ class _CameraFocusIndicatorState extends State<CameraFocusIndicator> {
               ),
               Positioned(
                 left: sliderLeft,
-                top: trackTop - _sunSize / 2,
-                width: _hitWidth,
-                height: _trackHeight + _sunSize,
+                top: trackTop - sunSize / 2,
+                width: hitWidth,
+                height: trackHeight + sunSize,
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onVerticalDragUpdate: _onDragUpdate,
                   child: _ExposureHandle(
                     exposure: _exposure,
-                    trackHeight: _trackHeight,
-                    sunSize: _sunSize,
-                    hitWidth: _hitWidth,
+                    trackHeight: trackHeight,
+                    sunSize: sunSize,
+                    hitWidth: hitWidth,
                     color: AppColors.color255_213_79,
                   ),
                 ),
@@ -193,6 +220,7 @@ class _CameraFocusPainter extends CustomPainter {
     required this.rectSize,
     required this.cornerLength,
     required this.strokeWidth,
+    required this.dotRadius,
     required this.color,
   });
 
@@ -200,6 +228,7 @@ class _CameraFocusPainter extends CustomPainter {
   final double rectSize;
   final double cornerLength;
   final double strokeWidth;
+  final double dotRadius;
   final Color color;
 
   @override
@@ -254,7 +283,7 @@ class _CameraFocusPainter extends CustomPainter {
 
     canvas.drawCircle(
       tapPosition,
-      3,
+      dotRadius,
       Paint()
         ..color = color
         ..style = PaintingStyle.fill,

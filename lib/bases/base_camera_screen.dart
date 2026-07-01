@@ -61,6 +61,13 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
   bool _pausedForLifecycle = false;
   int _cameraSession = 0;
 
+  /// Latest cover/contain scale from [AnalysisPreview], used to keep the focus
+  /// indicator a consistent on-screen size inside InteractiveViewer.
+  double _latestPreviewScale = 1.0;
+
+  Alignment get _effectivePreviewAlignment =>
+      _usesViewportContain ? Alignment.center : previewAlignment;
+
   @override
   void initState() {
     super.initState();
@@ -324,6 +331,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
       },
       onTapPainter: (tapPosition) => CameraFocusIndicator(
         position: tapPosition,
+        previewScale: _latestPreviewScale,
         exposure: CameraUiState.defaultExposure,
         onExposureChanged: (value) => cameraHost.applyExposure(value),
       ),
@@ -333,6 +341,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
   }
 
   Widget _buildPreviewDecorator(CameraState state, AnalysisPreview preview) {
+    _latestPreviewScale = preview.scale;
     final bool useViewportMask = _usesViewportContain;
 
     return Stack(
@@ -357,9 +366,6 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
     final bool useViewportMask = _usesViewportContain;
     final CameraPreviewFit effectivePreviewFit =
         useViewportMask ? CameraPreviewFit.cover : previewFit;
-    final Alignment effectivePreviewAlignment =
-        useViewportMask ? Alignment.center : previewAlignment;
-
     return CameraAwesomeBuilder.awesome(
       saveConfig: buildSaveConfig(),
       sensorConfig: SensorConfig.single(
@@ -369,7 +375,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
       ),
       enablePhysicalButton: true,
       previewFit: effectivePreviewFit,
-      previewAlignment: effectivePreviewAlignment,
+      previewAlignment: _effectivePreviewAlignment,
       previewDecoratorBuilder: _buildPreviewDecorator,
       theme: AwesomeTheme(
         bottomActionsBackgroundColor: Colors.transparent,
