@@ -35,16 +35,17 @@ class CameraFocusIndicator extends StatefulWidget {
 
 class _CameraFocusIndicatorState extends State<CameraFocusIndicator> {
   static const double _targetSize = 48;
-  static const double _cornerLength = 16;
-  static const double _strokeWidth = 1.5;
+  static const double _tickLength = 7;
+  static const double _strokeWidth = 1.0;
 
-  static const double _trackHeight = 120;
+  static const double _trackHeight = 100;
   static const double _sunSize = 26;
   static const double _hitWidth = 44;
   static const double _sliderGap = 10;
   static const double _edgePadding = 8;
 
   late double _exposure = widget.exposure.clamp(0.0, 1.0);
+  bool _showExposureTrack = false;
 
   double get _sizeFactor {
     final double scale = widget.previewScale;
@@ -61,7 +62,13 @@ class _CameraFocusIndicatorState extends State<CameraFocusIndicator> {
     if (widget.position != oldWidget.position ||
         widget.exposure != oldWidget.exposure) {
       _exposure = widget.exposure.clamp(0.0, 1.0);
+      _showExposureTrack = false;
     }
+  }
+
+  void _onDragEnd() {
+    if (!_showExposureTrack) return;
+    setState(() => _showExposureTrack = false);
   }
 
   void _onDragUpdate(DragUpdateDetails details) {
@@ -72,7 +79,10 @@ class _CameraFocusIndicatorState extends State<CameraFocusIndicator> {
     final double next =
         (_exposure - details.primaryDelta! / trackHeight).clamp(0.0, 1.0);
     if (next == _exposure) return;
-    setState(() => _exposure = next);
+    setState(() {
+      _exposure = next;
+      _showExposureTrack = true;
+    });
     widget.onExposureChanged?.call(_exposure);
   }
 
@@ -86,7 +96,7 @@ class _CameraFocusIndicatorState extends State<CameraFocusIndicator> {
         final double sizeFactor = _sizeFactor;
 
         final double targetSize = _targetSize * sizeFactor;
-        final double cornerLength = _cornerLength * sizeFactor;
+        final double tickLength = _tickLength * sizeFactor;
         final double strokeWidth = _strokeWidth * sizeFactor;
         final double trackHeight = _trackHeight * sizeFactor;
         final double sunSize = _sunSize * sizeFactor;
@@ -128,9 +138,8 @@ class _CameraFocusIndicatorState extends State<CameraFocusIndicator> {
                       painter: _CameraFocusPainter(
                         tapPosition: p,
                         rectSize: targetSize * anim,
-                        cornerLength: cornerLength * anim,
+                        tickLength: tickLength * anim,
                         strokeWidth: strokeWidth,
-                        dotRadius: 3 * sizeFactor,
                         color: AppColors.color255_213_79,
                       ),
                     );
@@ -145,11 +154,14 @@ class _CameraFocusIndicatorState extends State<CameraFocusIndicator> {
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onVerticalDragUpdate: _onDragUpdate,
+                  onVerticalDragEnd: (_) => _onDragEnd(),
+                  onVerticalDragCancel: _onDragEnd,
                   child: _ExposureHandle(
                     exposure: _exposure,
                     trackHeight: trackHeight,
                     sunSize: sunSize,
                     hitWidth: hitWidth,
+                    showTrack: _showExposureTrack,
                     color: AppColors.color255_213_79,
                   ),
                 ),
@@ -169,6 +181,7 @@ class _ExposureHandle extends StatelessWidget {
     required this.trackHeight,
     required this.sunSize,
     required this.hitWidth,
+    required this.showTrack,
     required this.color,
   });
 
@@ -176,6 +189,7 @@ class _ExposureHandle extends StatelessWidget {
   final double trackHeight;
   final double sunSize;
   final double hitWidth;
+  final bool showTrack;
   final Color color;
 
   @override
@@ -187,18 +201,19 @@ class _ExposureHandle extends StatelessWidget {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        Positioned(
-          left: hitWidth / 2 - 1,
-          top: sunSize / 2,
-          bottom: sunSize / 2,
-          child: Container(
-            width: 2,
-            decoration: BoxDecoration(
-              color: AppColors.white.withValues(alpha: 0.6),
-              borderRadius: BorderRadius.circular(1),
+        if (showTrack)
+          Positioned(
+            left: hitWidth / 2 - 1,
+            top: sunSize / 2,
+            bottom: sunSize / 2,
+            child: Container(
+              width: 2,
+              decoration: BoxDecoration(
+                color: AppColors.white.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(1),
+              ),
             ),
           ),
-        ),
         Positioned(
           left: hitWidth / 2 - sunSize / 2,
           top: (1 - exposure) * trackHeight,
@@ -218,17 +233,15 @@ class _CameraFocusPainter extends CustomPainter {
   const _CameraFocusPainter({
     required this.tapPosition,
     required this.rectSize,
-    required this.cornerLength,
+    required this.tickLength,
     required this.strokeWidth,
-    required this.dotRadius,
     required this.color,
   });
 
   final Offset tapPosition;
   final double rectSize;
-  final double cornerLength;
+  final double tickLength;
   final double strokeWidth;
-  final double dotRadius;
   final Color color;
 
   @override
@@ -237,57 +250,22 @@ class _CameraFocusPainter extends CustomPainter {
     final double top = tapPosition.dy - rectSize / 2;
     final double right = left + rectSize;
     final double bottom = top + rectSize;
+    final double cx = tapPosition.dx;
+    final double cy = tapPosition.dy;
 
     final Paint paint = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
+      ..strokeCap = StrokeCap.square;
 
-    // Top-left
-    canvas.drawPath(
-      Path()
-        ..moveTo(left, top + cornerLength)
-        ..lineTo(left, top)
-        ..lineTo(left + cornerLength, top),
-      paint,
-    );
+    canvas.drawRect(Rect.fromLTRB(left, top, right, bottom), paint);
 
-    // Top-right
-    canvas.drawPath(
-      Path()
-        ..moveTo(right - cornerLength, top)
-        ..lineTo(right, top)
-        ..lineTo(right, top + cornerLength),
-      paint,
-    );
-
-    // Bottom-right
-    canvas.drawPath(
-      Path()
-        ..moveTo(right, bottom - cornerLength)
-        ..lineTo(right, bottom)
-        ..lineTo(right - cornerLength, bottom),
-      paint,
-    );
-
-    // Bottom-left
-    canvas.drawPath(
-      Path()
-        ..moveTo(left + cornerLength, bottom)
-        ..lineTo(left, bottom)
-        ..lineTo(left, bottom - cornerLength),
-      paint,
-    );
-
-    canvas.drawCircle(
-      tapPosition,
-      dotRadius,
-      Paint()
-        ..color = color
-        ..style = PaintingStyle.fill,
-    );
+    // Inward ticks centered on each side.
+    canvas.drawLine(Offset(cx, top), Offset(cx, top + tickLength), paint);
+    canvas.drawLine(Offset(cx, bottom), Offset(cx, bottom - tickLength), paint);
+    canvas.drawLine(Offset(left, cy), Offset(left + tickLength, cy), paint);
+    canvas.drawLine(Offset(right, cy), Offset(right - tickLength, cy), paint);
   }
 
   @override
