@@ -4,15 +4,15 @@ import 'package:demo_roketota_app/utils/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// Horizontal quick-exposure bar shown above the record button (iOS Camera style).
+/// Horizontal exposure bar for photo and video modes (iOS Camera style).
 ///
 /// [exposure] is normalized in [0, 1]; 0.5 is neutral (0 EV). Drag the scale
 /// horizontally to adjust brightness; [onClose] dismisses the bar.
-class VideoQuickExposure extends StatefulWidget {
+class CameraExposure extends StatefulWidget {
   /// Fixed bar height; use with bottom slot padding to reserve layout space.
   static const double preferredHeight = 52;
 
-  const VideoQuickExposure({
+  const CameraExposure({
     super.key,
     required this.exposure,
     required this.onExposureChanged,
@@ -36,12 +36,12 @@ class VideoQuickExposure extends StatefulWidget {
   final double stepEv;
 
   @override
-  State<VideoQuickExposure> createState() => _VideoQuickExposureState();
+  State<CameraExposure> createState() => _CameraExposureState();
 }
 
-class _VideoQuickExposureState extends State<VideoQuickExposure> {
+class _CameraExposureState extends State<CameraExposure> {
   static const double _dragSensitivity = 0.0045;
-  static const double _height = VideoQuickExposure.preferredHeight;
+  static const double _height = CameraExposure.preferredHeight;
   static const double _closeHitSize = 40;
 
   double? _dragExposure;
@@ -150,7 +150,7 @@ class _VideoQuickExposureState extends State<VideoQuickExposure> {
                     ),
                   ),
                   Positioned(
-                    left: 0,
+                    left: 10,
                     top: 0,
                     bottom: 0,
                     width: _closeHitSize,

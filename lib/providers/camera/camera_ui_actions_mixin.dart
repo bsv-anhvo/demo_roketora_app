@@ -10,6 +10,7 @@ abstract interface class CameraUiHost {
   CameraUiState get cameraUi;
   FlashMode get flashMode;
   void toggleControlPanel();
+  void toggleExposureSlider();
   Future<void> applyFlash(SensorConfig sensorConfig);
   Future<void> applyExposure(double value);
   Future<void> applyZoom(SensorConfig sensorConfig, double zoom);
@@ -49,6 +50,7 @@ mixin CameraUiActions<S> on AutoDisposeNotifier<S> implements CameraUiHost {
     cameraUi = cameraUi.copyWith(flash: flash);
   }
 
+  @override
   void toggleExposureSlider() {
     cameraUi = cameraUi.copyWith(
       showExposureSlider: !cameraUi.showExposureSlider,

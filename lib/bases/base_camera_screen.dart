@@ -16,6 +16,7 @@ import 'package:demo_roketota_app/providers/locale_provider.dart';
 import 'package:demo_roketota_app/utils/device_requirements.dart';
 import 'package:demo_roketota_app/utils/strings.dart';
 import 'package:demo_roketota_app/widgets/camera/bounded_pinch_zoom_overlay.dart';
+import 'package:demo_roketota_app/widgets/camera/camera_exposure.dart';
 import 'package:demo_roketota_app/widgets/camera/camera_filter_strip.dart';
 import 'package:demo_roketota_app/widgets/camera/camera_focus_indicator.dart';
 import 'package:demo_roketota_app/widgets/camera/ios_style_zoom_selector.dart';
@@ -23,6 +24,7 @@ import 'package:demo_roketota_app/widgets/common/app_top_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gap/gap.dart';
 
 /// How long the tap-to-focus overlay (frame + exposure handle) stays visible.
 const Duration _focusOverlayDuration = Duration(seconds: 4);
@@ -295,6 +297,27 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
     );
   }
 
+  static const double _exposureSlotHeight = 10 + CameraExposure.preferredHeight;
+
+  Widget buildExposureSliderSlot() {
+    return SizedBox(
+      height: _exposureSlotHeight,
+      child: cameraUi.showExposureSlider
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Gap(10),
+                CameraExposure(
+                  exposure: cameraUi.exposure,
+                  onExposureChanged: (value) => cameraHost.applyExposure(value),
+                  onClose: cameraHost.toggleExposureSlider,
+                ),
+              ],
+            )
+          : null,
+    );
+  }
+
   Widget _buildPermissionGate() {
     return const Center(
       child: CircularProgressIndicator(color: AppColors.white),
@@ -332,7 +355,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
       onTapPainter: (tapPosition) => CameraFocusIndicator(
         position: tapPosition,
         previewScale: _latestPreviewScale,
-        exposure: CameraUiState.defaultExposure,
+        exposure: cameraUi.exposure,
         onExposureChanged: (value) => cameraHost.applyExposure(value),
       ),
       // Longer than the default so the exposure handle stays draggable.

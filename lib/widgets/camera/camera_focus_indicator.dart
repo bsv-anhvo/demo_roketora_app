@@ -4,8 +4,9 @@ import 'package:flutter/material.dart';
 /// Tap-to-focus frame with an iOS-style vertical exposure slider on its side.
 ///
 /// The focus frame is non-interactive while the sun handle can be dragged
-/// vertically to change exposure. The State is reused across taps, so
-/// [didUpdateWidget] re-syncs the handle to [exposure] on each new tap.
+/// vertically to change exposure. [didUpdateWidget] re-syncs the sun handle
+/// when [exposure] changes from outside (e.g. the horizontal exposure bar).
+/// The focus frame animation only runs on a new tap position.
 ///
 /// When drawn inside camerawesome's scaled preview, pass [previewScale] from
 /// [AnalysisPreview.scale] so the overlay keeps a consistent on-screen size.
@@ -56,13 +57,12 @@ class _CameraFocusIndicatorState extends State<CameraFocusIndicator> {
   @override
   void didUpdateWidget(CameraFocusIndicator oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // The State is reused across taps (same type, no key). A new tap means a
-    // new focus point, which always resets exposure to neutral, so re-sync the
-    // local value whenever the tap position or the incoming exposure changes.
-    if (widget.position != oldWidget.position ||
-        widget.exposure != oldWidget.exposure) {
+    if (widget.position != oldWidget.position) {
       _exposure = widget.exposure.clamp(0.0, 1.0);
       _showExposureTrack = false;
+    } else if (widget.exposure != oldWidget.exposure) {
+      _exposure = widget.exposure.clamp(0.0, 1.0);
+      _showExposureTrack = true;
     }
   }
 

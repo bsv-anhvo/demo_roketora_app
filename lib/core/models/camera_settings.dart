@@ -8,6 +8,19 @@ enum PhotoTimerOption { off, three, five, ten }
 
 enum PhotoCaptureStyle { normal, portrait }
 
+/// Manual exposure adjustment UI state in the control panel.
+enum ExposureControlOption { hidden, active }
+
+extension ExposureControlOptionX on ExposureControlOption {
+  bool get isActive => this == ExposureControlOption.active;
+
+  ExposureControlOption get toggle =>
+      isActive ? ExposureControlOption.hidden : ExposureControlOption.active;
+
+  static ExposureControlOption fromSliderVisible(bool visible) =>
+      visible ? ExposureControlOption.active : ExposureControlOption.hidden;
+}
+
 extension FlashSettingX on FlashSetting {
   String get label => switch (this) {
         FlashSetting.off => 'Off',

@@ -16,7 +16,6 @@ import 'package:demo_roketota_app/utils/strings.dart';
 import 'package:demo_roketota_app/widgets/common/app_camera_capture_button.dart';
 import 'package:demo_roketota_app/widgets/common/app_loading_overlay.dart';
 import 'package:demo_roketota_app/widgets/camera/camera_control_panel.dart';
-import 'package:demo_roketota_app/widgets/camera/video_quick_exposure.dart';
 import 'package:demo_roketota_app/widgets/media/video_record_elapsed_timer.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
@@ -32,12 +31,9 @@ class VideoRecordScreen extends CameraScreenBase {
 class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
     with SingleTickerProviderStateMixin {
   static const double _holdHintHeight = 18;
-  static const double _quickExposureSlotHeight =
-      10 + VideoQuickExposure.preferredHeight;
 
   String? _processingMessage;
   bool _isHoldRecording = false;
-  bool _quickExposureDismissed = false;
   bool _isHandlingRecordedVideo = false;
   String? _handledVideoStampPath;
   late final AnimationController _recordPulseController;
@@ -187,10 +183,7 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
 
   void _onHoldRecordingChanged(bool isHolding) {
     if (_isHoldRecording == isHolding) return;
-    setState(() {
-      _isHoldRecording = isHolding;
-      if (isHolding) _quickExposureDismissed = false;
-    });
+    setState(() => _isHoldRecording = isHolding);
     if (isHolding) {
       _recordPulseController.repeat(reverse: true);
     } else if (!_videoState.isRecording) {
@@ -199,10 +192,6 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
         ..reset();
     }
   }
-
-  bool get _showQuickExposure =>
-      !_quickExposureDismissed &&
-      (_isHoldRecording || _videoState.isRecording);
 
   void _syncRecordPulseAnimation() {
     final bool shouldPulse = _isHoldRecording || _videoState.isRecording;
@@ -293,7 +282,6 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
     switch ((event.status, event.isPicture, event.isVideo)) {
       case (MediaCaptureStatus.capturing, false, true):
         _handledVideoStampPath = null;
-        if (mounted) setState(() => _quickExposureDismissed = false);
         _notifier.startRecordTimer(isMounted: () => mounted);
         _syncRecordPulseAnimation();
       case (MediaCaptureStatus.success, false, true):
@@ -347,6 +335,7 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
             flash: ui.flash,
             timer: PhotoTimerOption.off,
             showFilterStrip: ui.showFilterStrip,
+            showExposureSlider: ui.showExposureSlider,
             resolutionLabel: video.videoQuality.label,
             fpsLabel: Platform.isIOS ? video.videoFps.label : null,
             bitrateLabel: Platform.isAndroid ? video.videoBitrate.label : null,
@@ -355,7 +344,7 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
               _notifier.applyFlash(state.sensorConfig);
             },
             onToggleFilter: _notifier.toggleFilterStrip,
-            onExposureChanged: (value) => _notifier.applyExposure(value),
+            onExposureTap: _notifier.toggleExposureSlider,
             onTimerTap: () {},
             onResolutionTap: pickVideoQuality,
             onFpsTap: Platform.isIOS ? pickVideoFps : null,
@@ -455,23 +444,7 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
               onVideoRecordStop: _onVideoRecordStop,
             ),
           ),
-          SizedBox(
-            height: _quickExposureSlotHeight,
-            child: _showQuickExposure
-                ? Column(
-                    children: [
-                      const Gap(10),
-                      VideoQuickExposure(
-                        exposure: cameraUi.exposure,
-                        onExposureChanged: (value) =>
-                            _notifier.applyExposure(value),
-                        onClose: () =>
-                            setState(() => _quickExposureDismissed = true),
-                      ),
-                    ],
-                  )
-                : null,
-          ),
+          buildExposureSliderSlot(),
         ],
       ),
     );
