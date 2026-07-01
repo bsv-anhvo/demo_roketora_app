@@ -353,6 +353,9 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
         baseTap.onTap(position, flutterPreviewSize, pixelPreviewSize);
       },
       onTapPainter: (tapPosition) => CameraFocusIndicator(
+        key: ValueKey(
+          'focus_${tapPosition.dx}_${tapPosition.dy}',
+        ),
         position: tapPosition,
         previewScale: _latestPreviewScale,
         exposure: cameraUi.exposure,

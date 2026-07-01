@@ -40,7 +40,7 @@ class _CameraFocusIndicatorState extends State<CameraFocusIndicator> {
   static const double _strokeWidth = 1.0;
 
   static const double _trackHeight = 100;
-  static const double _sunSize = 26;
+  static const double _sunSize = 18;
   static const double _hitWidth = 44;
   static const double _sliderGap = 10;
   static const double _edgePadding = 8;
@@ -58,12 +58,16 @@ class _CameraFocusIndicatorState extends State<CameraFocusIndicator> {
   void didUpdateWidget(CameraFocusIndicator oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.position != oldWidget.position) {
-      _exposure = widget.exposure.clamp(0.0, 1.0);
-      _showExposureTrack = false;
+      _resetUi();
     } else if (widget.exposure != oldWidget.exposure) {
       _exposure = widget.exposure.clamp(0.0, 1.0);
       _showExposureTrack = true;
     }
+  }
+
+  void _resetUi() {
+    _exposure = widget.exposure.clamp(0.0, 1.0);
+    _showExposureTrack = false;
   }
 
   void _onDragEnd() {
@@ -88,6 +92,11 @@ class _CameraFocusIndicatorState extends State<CameraFocusIndicator> {
 
   @override
   Widget build(BuildContext context) {
+    // Drop overlay layers while the screen is inactive to avoid iOS ghosting.
+    if (!TickerMode.valuesOf(context).enabled) {
+      return const SizedBox.shrink();
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final double maxW = constraints.maxWidth;
@@ -124,7 +133,7 @@ class _CameraFocusIndicatorState extends State<CameraFocusIndicator> {
           width: maxW,
           height: maxH,
           child: Stack(
-            clipBehavior: Clip.none,
+            clipBehavior: Clip.hardEdge,
             children: [
               IgnorePointer(
                 child: TweenAnimationBuilder<double>(
@@ -146,23 +155,26 @@ class _CameraFocusIndicatorState extends State<CameraFocusIndicator> {
                   },
                 ),
               ),
-              Positioned(
-                left: sliderLeft,
-                top: trackTop - sunSize / 2,
-                width: hitWidth,
-                height: trackHeight + sunSize,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onVerticalDragUpdate: _onDragUpdate,
-                  onVerticalDragEnd: (_) => _onDragEnd(),
-                  onVerticalDragCancel: _onDragEnd,
-                  child: _ExposureHandle(
-                    exposure: _exposure,
-                    trackHeight: trackHeight,
-                    sunSize: sunSize,
-                    hitWidth: hitWidth,
-                    showTrack: _showExposureTrack,
-                    color: AppColors.color255_213_79,
+              KeyedSubtree(
+                key: ValueKey(p),
+                child: Positioned(
+                  left: sliderLeft,
+                  top: trackTop - sunSize / 2,
+                  width: hitWidth,
+                  height: trackHeight + sunSize,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onVerticalDragUpdate: _onDragUpdate,
+                    onVerticalDragEnd: (_) => _onDragEnd(),
+                    onVerticalDragCancel: _onDragEnd,
+                    child: _ExposureHandle(
+                      exposure: _exposure,
+                      trackHeight: trackHeight,
+                      sunSize: sunSize,
+                      hitWidth: hitWidth,
+                      showTrack: _showExposureTrack,
+                      color: AppColors.color255_213_79,
+                    ),
                   ),
                 ),
               ),
@@ -194,12 +206,8 @@ class _ExposureHandle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const List<Shadow> shadows = [
-      Shadow(color: Colors.black54, blurRadius: 4),
-    ];
-
     return Stack(
-      clipBehavior: Clip.none,
+      clipBehavior: Clip.hardEdge,
       children: [
         if (showTrack)
           Positioned(
@@ -221,7 +229,6 @@ class _ExposureHandle extends StatelessWidget {
             Icons.wb_sunny,
             size: sunSize,
             color: color,
-            shadows: shadows,
           ),
         ),
       ],

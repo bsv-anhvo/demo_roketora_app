@@ -92,8 +92,12 @@ class CameraHelper {
           pixelPreviewSize: pixelPreviewSize,
         );
       },
-      onTapPainter: (tapPosition) =>
-          CameraFocusIndicator(position: tapPosition),
+      onTapPainter: (tapPosition) => CameraFocusIndicator(
+        key: ValueKey(
+          'focus_${tapPosition.dx}_${tapPosition.dy}',
+        ),
+        position: tapPosition,
+      ),
       tapPainterDuration: Constants.focusIndicatorDuration,
     );
   }
