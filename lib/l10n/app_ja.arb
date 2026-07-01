@@ -20,6 +20,8 @@
   "labelPortrait": "ポートレート",
   "labelResolution": "解像度",
   "labelFps": "FPS",
+  "labelBitrate": "ビットレート",
+  "labelVideoBitrate": "動画ビットレート",
   "labelTimeRecord": "{current} / {max}",
   "labelHoldToRecordVideo": "ボタンを長押しして録画",
   "labelRecording": "録画中",

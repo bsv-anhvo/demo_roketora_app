@@ -69,6 +69,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get labelFps => 'FPS';
 
   @override
+  String get labelBitrate => 'ビットレート';
+
+  @override
+  String get labelVideoBitrate => '動画ビットレート';
+
+  @override
   String labelTimeRecord(String current, String max) {
     return '$current / $max';
   }

@@ -20,6 +20,8 @@
   "labelPortrait": "Portrait",
   "labelResolution": "Resolution",
   "labelFps": "FPS",
+  "labelBitrate": "Bitrate",
+  "labelVideoBitrate": "Video Bitrate",
   "labelTimeRecord": "{current} / {max}",
   "@labelTimeRecord": {
     "placeholders": {

@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:camerawesome/pigeon.dart';
 import 'package:demo_roketota_app/bases/base_camera_screen.dart';
@@ -65,8 +67,10 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
   String get screenTitle => Strings.labelRecordVideo;
 
   @override
-  Key get cameraWidgetKey =>
-      ValueKey('video_${_videoState.videoQuality.index}_${_videoState.videoFps.fps}');
+  Key get cameraWidgetKey => ValueKey(
+        'video_${_videoState.videoQuality.index}_'
+        '${Platform.isIOS ? _videoState.videoFps.fps : _videoState.videoBitrate.mbps}',
+      );
 
   @override
   CameraPreviewFit get previewFit => CameraPreviewFit.contain;
@@ -94,7 +98,7 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
       enableAudio: true,
       quality: _videoState.videoQuality,
       android: AndroidVideoOptions(
-        bitrate: 6000000,
+        bitrate: _videoState.videoBitrate.bitrate,
         fallbackStrategy: QualityFallbackStrategy.lower,
       ),
       ios: CupertinoVideoOptions(fps: _videoState.videoFps.fps),
@@ -126,6 +130,20 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
 
     if (picked != null && picked.fps != _videoState.videoFps.fps) {
       _notifier.setVideoFps(picked);
+    }
+  }
+
+  Future<void> pickVideoBitrate() async {
+    final VideoBitrateOption? picked = await showCameraPickerSheet(
+      context: context,
+      title: Strings.labelVideoBitrate,
+      options: kVideoBitrateOptions,
+      labelBuilder: (option) => option.label,
+      selected: _videoState.videoBitrate,
+    );
+
+    if (picked != null && picked.mbps != _videoState.videoBitrate.mbps) {
+      _notifier.setVideoBitrate(picked);
     }
   }
 
@@ -316,7 +334,8 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
             timer: PhotoTimerOption.off,
             showFilterStrip: ui.showFilterStrip,
             resolutionLabel: video.videoQuality.label,
-            fpsLabel: video.videoFps.label,
+            fpsLabel: Platform.isIOS ? video.videoFps.label : null,
+            bitrateLabel: Platform.isAndroid ? video.videoBitrate.label : null,
             onFlashTap: () {
               _notifier.setFlash(ui.flash.next);
               _notifier.applyFlash(state.sensorConfig);
@@ -325,7 +344,8 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
             onExposureChanged: (value) => _notifier.applyExposure(value),
             onTimerTap: () {},
             onResolutionTap: pickVideoQuality,
-            onFpsTap: pickVideoFps,
+            onFpsTap: Platform.isIOS ? pickVideoFps : null,
+            onBitrateTap: Platform.isAndroid ? pickVideoBitrate : null,
           ),
         ),
         const SizedBox(height: 12),

@@ -44,6 +44,11 @@ class VideoRecordNotifier extends AutoDisposeNotifier<VideoRecordState>
     resetCameraSession();
   }
 
+  void setVideoBitrate(VideoBitrateOption bitrate) {
+    state = state.copyWith(videoBitrate: bitrate);
+    resetCameraSession();
+  }
+
   void onCameraReady(CameraState cameraState) {
     onCameraReadyBase(cameraState);
     Future.microtask(() => _restorePendingFilter(cameraState));

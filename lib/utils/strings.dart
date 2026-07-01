@@ -33,6 +33,8 @@ class Strings {
   static String get labelPortrait => _l.labelPortrait;
   static String get labelResolution => _l.labelResolution;
   static String get labelFps => _l.labelFps;
+  static String get labelBitrate => _l.labelBitrate;
+  static String get labelVideoBitrate => _l.labelVideoBitrate;
   static String get labelHoldToRecordVideo => _l.labelHoldToRecordVideo;
   static String get labelRecording => _l.labelRecording;
   static String get labelOriginal => _l.labelOriginal;

@@ -218,6 +218,18 @@ abstract class AppLocalizations {
   /// **'FPS'**
   String get labelFps;
 
+  /// No description provided for @labelBitrate.
+  ///
+  /// In en, this message translates to:
+  /// **'Bitrate'**
+  String get labelBitrate;
+
+  /// No description provided for @labelVideoBitrate.
+  ///
+  /// In en, this message translates to:
+  /// **'Video Bitrate'**
+  String get labelVideoBitrate;
+
   /// No description provided for @labelTimeRecord.
   ///
   /// In en, this message translates to:

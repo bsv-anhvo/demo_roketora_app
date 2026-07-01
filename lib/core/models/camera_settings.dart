@@ -89,6 +89,17 @@ class VideoFpsOption {
   String get label => '$fps FPS';
 }
 
+class VideoBitrateOption {
+  const VideoBitrateOption(this.mbps);
+
+  final int mbps;
+
+  /// Bitrate in bits per second for [AndroidVideoOptions].
+  int get bitrate => mbps * 1000000;
+
+  String get label => '$mbps Mbps';
+}
+
 const List<VideoRecordingQuality> kVideoQualities = [
   VideoRecordingQuality.hd,
   VideoRecordingQuality.fhd,
@@ -99,6 +110,14 @@ const List<VideoFpsOption> kVideoFpsOptions = [
   VideoFpsOption(24),
   VideoFpsOption(30),
   VideoFpsOption(60),
+];
+
+const List<VideoBitrateOption> kVideoBitrateOptions = [
+  VideoBitrateOption(5),
+  VideoBitrateOption(10),
+  VideoBitrateOption(20),
+  VideoBitrateOption(50),
+  VideoBitrateOption(100),
 ];
 
 const List<DeviceOrientation> kCameraOrientations = [

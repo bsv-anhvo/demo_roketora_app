@@ -19,6 +19,8 @@ class CameraControlPanel extends StatelessWidget {
     this.resolutionLabel,
     this.onFpsTap,
     this.fpsLabel,
+    this.onBitrateTap,
+    this.bitrateLabel,
     this.resolutionIcon,
     this.showFilterStrip = false,
     this.onToggleFilter,
@@ -29,6 +31,7 @@ class CameraControlPanel extends StatelessWidget {
   final PhotoTimerOption timer;
   final String? resolutionLabel;
   final String? fpsLabel;
+  final String? bitrateLabel;
   final bool showFilterStrip;
   final VoidCallback onFlashTap;
   final VoidCallback onTimerTap;
@@ -36,6 +39,7 @@ class CameraControlPanel extends StatelessWidget {
   final ValueChanged<double> onExposureChanged;
   final VoidCallback onResolutionTap;
   final VoidCallback? onFpsTap;
+  final VoidCallback? onBitrateTap;
   final IconData? resolutionIcon;
 
   @override
@@ -78,6 +82,12 @@ class CameraControlPanel extends StatelessWidget {
                   icon: Icons.speed_outlined,
                   label: fpsLabel ?? Strings.labelFps,
                   onTap: onFpsTap!,
+                ),
+              if (!isPhotoMode && onBitrateTap != null)
+                _ControlChip(
+                  icon: Icons.data_usage_outlined,
+                  label: bitrateLabel ?? Strings.labelBitrate,
+                  onTap: onBitrateTap!,
                 ),
             ],
           ),
