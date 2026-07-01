@@ -4,23 +4,8 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
-	<key>NSCameraUsageDescription</key>
-	<string>This app needs camera permissions to take photos and record videos.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>This app needs permission to save photos to your photo library.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>This app needs permission to manage photos in your photo library.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>This app needs microphone permission to record audio while shooting video.</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>This app needs location access to tag photos and videos with GPS coordinates.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
-	<key>CFBundleLocalizations</key>
-	<array>
-		<string>en</string>
-		<string>ja</string>
-	</array>
 	<key>CFBundleDisplayName</key>
 	<string>Demo Roketota App</string>
 	<key>CFBundleExecutable</key>
@@ -29,6 +14,11 @@
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>ja</string>
+	</array>
 	<key>CFBundleName</key>
 	<string>demo_roketota_app</string>
 	<key>CFBundlePackageType</key>
@@ -41,6 +31,16 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>This app needs camera permissions to take photos and record videos.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>This app needs location access to tag photos and videos with GPS coordinates.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app needs microphone permission to record audio while shooting video.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>This app needs permission to save photos to your photo library.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app needs permission to manage photos in your photo library.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
