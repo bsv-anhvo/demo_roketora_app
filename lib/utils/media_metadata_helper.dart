@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:demo_roketota_app/core/extensions/logger_extension.dart';
+import 'package:demo_roketota_app/utils/constants.dart';
 import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new/ffprobe_kit.dart';
 import 'package:ffmpeg_kit_flutter_new/return_code.dart';
@@ -12,11 +14,10 @@ import 'package:native_exif/native_exif.dart';
 class MediaMetadataHelper {
   const MediaMetadataHelper._();
 
-  static final DateFormat _exifDateFormat = DateFormat('yyyy:MM:dd HH:mm:ss');
-  static final DateFormat _videoLocalClockFormat =
-      DateFormat("yyyy-MM-dd'T'HH:mm:ss");
-  static final DateFormat _videoLocalSpaceFormat =
-      DateFormat('yyyy-MM-dd HH:mm:ss');
+  static final DateFormat _exifDateFormat = DateFormat(Constants.formatDateTime1);
+  static final DateFormat _videoLocalClockFormat = DateFormat(Constants.formatDateTime3);
+  static final DateFormat _videoLocalSpaceFormat = DateFormat(Constants.formatDateTime2);
+
   static const String _legacyMetadataSuffix = '.metadata.tmp.mp4';
   static const String _metadataFfmetaSuffix = '.creation.ffmeta';
 
@@ -97,7 +98,7 @@ class MediaMetadataHelper {
       });
       await exif.close();
     } catch (e, stackTrace) {
-      debugPrint('Write photo EXIF failed for $filePath: $e\n$stackTrace');
+      'Write photo EXIF failed for $filePath: $e\n$stackTrace'.log();
     }
   }
 
@@ -136,7 +137,7 @@ class MediaMetadataHelper {
     await deleteLegacyMetadataSidecars(<String>[filePath]);
 
     if (!await _waitForReadableVideoFile(filePath)) {
-      debugPrint('Write video metadata skipped: unreadable file $filePath');
+      'Write video metadata skipped: unreadable file $filePath'.log();
       return;
     }
 
@@ -157,9 +158,7 @@ class MediaMetadataHelper {
       );
       if (patchedInPlace) return;
 
-      debugPrint(
-        'MP4 in-place patch missed headers for $filePath, trying FFmpeg remux',
-      );
+      'MP4 in-place patch missed headers for $filePath, trying FFmpeg remux'.log();
 
       final bool remuxed = await _remuxVideoWithCaptureMetadata(
         inputPath: filePath,
@@ -170,7 +169,7 @@ class MediaMetadataHelper {
       );
 
       if (!remuxed) {
-        debugPrint('Write video metadata failed for $filePath');
+        'Write video metadata failed for $filePath'.log();
         return;
       }
 
@@ -185,7 +184,7 @@ class MediaMetadataHelper {
         await tempFile.delete();
       }
     } catch (e, stackTrace) {
-      debugPrint('Write video metadata failed for $filePath: $e\n$stackTrace');
+      'Write video metadata failed for $filePath: $e\n$stackTrace'.log();
     } finally {
       await _deleteIfExists(tempPath);
       await deleteLegacyMetadataSidecars(<String>[filePath]);
@@ -237,7 +236,7 @@ class MediaMetadataHelper {
       );
       return ffmetaPath;
     } catch (e, stackTrace) {
-      debugPrint('Write ffmeta failed for $filePath: $e\n$stackTrace');
+      'Write ffmeta failed for $filePath: $e\n$stackTrace'.log();
       return null;
     }
   }
@@ -369,11 +368,8 @@ class MediaMetadataHelper {
 
         final String? output = await session.getOutput();
         final String logs = await session.getAllLogsAsString() ?? '';
-        debugPrint(
-          'FFmpeg metadata attempt ${index + 1}/${attempts.length} failed '
-          'for $inputPath (returnCode=$returnCode)',
-        );
-        debugPrint('FFmpeg args: $args');
+        'FFmpeg metadata attempt ${index + 1}/${attempts.length} failed for $inputPath (returnCode=$returnCode)'.log();
+        'FFmpeg args: $args'.log();
         if (output != null && output.isNotEmpty) {
           debugPrint('FFmpeg output: $output');
         }
@@ -381,7 +377,7 @@ class MediaMetadataHelper {
           final String tail = logs.length > 1500
               ? logs.substring(logs.length - 1500)
               : logs;
-          debugPrint('FFmpeg logs: $tail');
+          'FFmpeg logs: $tail'.log();
         }
       }
 

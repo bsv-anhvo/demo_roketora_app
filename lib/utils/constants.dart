@@ -12,6 +12,15 @@ class Constants {
   static const double desiredMax = 3.0;
   static const List<double> presetStops = [0.5, 1.0, 2.0, 3.0];
 
+  static const String formatDateTime1 = 'yyyy:MM:dd HH:mm:ss';
+  static const String formatDateTime2 = 'yyyy-MM-dd HH:mm:ss';
+  static const String formatDateTime3 = "yyyy-MM-dd'T'HH:mm:ss";
+
+  static const int versionDatabase = 1;
+
+  static const String databaseName = 'roketora_media.db';
+  static const String tableMediaRecords = 'media_records';
+
   /// Used before native zoom limits are available (camera not ready yet).
   static const ZoomRange fallbackRange = ZoomRange(
     displayMin: 1.0,

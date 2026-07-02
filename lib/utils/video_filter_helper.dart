@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:camerawesome/camerawesome_plugin.dart';
+import 'package:demo_roketota_app/core/extensions/logger_extension.dart';
 import 'package:demo_roketota_app/utils/photo_filter_helper.dart';
 import 'package:demo_roketota_app/utils/strings.dart';
 import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
@@ -104,7 +105,7 @@ class VideoFilterHelper {
 
       await File(outputPath).copy(filePath);
     } catch (e, stackTrace) {
-      debugPrint('Video filter apply failed: $e\n$stackTrace');
+      'Video filter apply failed: $e\n$stackTrace'.log();
       rethrow;
     } finally {
       if (await workDir.exists()) {
@@ -127,7 +128,7 @@ class VideoFilterHelper {
         );
       }
     } catch (e, stackTrace) {
-      debugPrint('Video fps probe failed: $e\n$stackTrace');
+      'Video fps probe failed: $e\n$stackTrace'.log();
     }
     return null;
   }

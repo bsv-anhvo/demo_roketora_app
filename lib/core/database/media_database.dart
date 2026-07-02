@@ -1,6 +1,7 @@
 import 'package:demo_roketota_app/core/database/database_initializer.dart';
+import 'package:demo_roketota_app/core/extensions/logger_extension.dart';
 import 'package:demo_roketota_app/core/models/media_record.dart';
-import 'package:flutter/foundation.dart';
+import 'package:demo_roketota_app/utils/constants.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
@@ -8,8 +9,6 @@ class MediaDatabase {
   MediaDatabase._();
 
   static final MediaDatabase instance = MediaDatabase._();
-
-  static const String _tableName = 'media_records';
 
   Database? _database;
   Future<Database>? _opening;
@@ -55,7 +54,7 @@ class MediaDatabase {
       try {
         await existing.close();
       } catch (e, stackTrace) {
-        debugPrint('Close media database failed: $e\n$stackTrace');
+        'Close media database failed: $e\n$stackTrace'.log();
       }
     }
   }
@@ -64,14 +63,14 @@ class MediaDatabase {
     await ensureSqfliteInitialized();
 
     final String databasesPath = await getDatabasesPath();
-    final String dbPath = p.join(databasesPath, 'roketora_media.db');
+    final String dbPath = p.join(databasesPath, Constants.databaseName);
 
     return openDatabase(
       dbPath,
-      version: 1,
+      version: Constants.versionDatabase,
       onCreate: (Database db, int version) async {
         await db.execute('''
-          CREATE TABLE $_tableName (
+          CREATE TABLE ${Constants.tableMediaRecords} (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             type TEXT NOT NULL,
             captured_at TEXT NOT NULL,
@@ -83,7 +82,7 @@ class MediaDatabase {
           )
         ''');
         await db.execute(
-          'CREATE INDEX idx_media_original_stamp_path ON $_tableName(original_stamp_path)',
+          'CREATE INDEX idx_media_original_stamp_path ON ${Constants.tableMediaRecords}(original_stamp_path)',
         );
       },
     );
@@ -97,7 +96,7 @@ class MediaDatabase {
         rethrow;
       }
 
-      debugPrint('Media database stale, reopening: $e');
+      'Media database stale, reopening: $e'.log();
       await reopen();
       return action(await database);
     }
@@ -114,7 +113,7 @@ class MediaDatabase {
   Future<int> insert(MediaRecord record) {
     return _withRecovery(
       (Database db) => db.insert(
-        _tableName,
+        Constants.tableMediaRecords,
         record.toMap()..remove('id'),
         conflictAlgorithm: ConflictAlgorithm.replace,
       ),
@@ -124,7 +123,7 @@ class MediaDatabase {
   Future<MediaRecord?> findByOriginalStampPath(String originalStampPath) {
     return _withRecovery((Database db) async {
       final List<Map<String, Object?>> rows = await db.query(
-        _tableName,
+        Constants.tableMediaRecords,
         where: 'original_stamp_path = ?',
         whereArgs: <Object?>[originalStampPath],
         limit: 1,
@@ -142,7 +141,7 @@ class MediaDatabase {
   }) {
     return _withRecovery(
       (Database db) => db.update(
-        _tableName,
+        Constants.tableMediaRecords,
         <String, Object?>{
           'persisted_original_path': persistedOriginalPath,
           'saved_at': savedAt.toIso8601String(),
@@ -156,7 +155,7 @@ class MediaDatabase {
   Future<void> deleteByOriginalStampPath(String originalStampPath) {
     return _withRecovery(
       (Database db) => db.delete(
-        _tableName,
+        Constants.tableMediaRecords,
         where: 'original_stamp_path = ?',
         whereArgs: <Object?>[originalStampPath],
       ),
@@ -166,7 +165,7 @@ class MediaDatabase {
   Future<void> deleteUnsavedCaptures() {
     return _withRecovery(
       (Database db) => db.delete(
-        _tableName,
+        Constants.tableMediaRecords,
         where: 'saved_at IS NULL',
       ),
     );

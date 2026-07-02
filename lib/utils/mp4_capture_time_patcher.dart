@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:demo_roketota_app/core/extensions/logger_extension.dart';
 import 'package:flutter/foundation.dart';
 
 /// Patches MP4 movie/track header creation times in-place (no re-encode).
@@ -41,7 +42,7 @@ class Mp4CaptureTimePatcher {
       await file.writeAsBytes(bytes, flush: true);
       return true;
     } catch (e, stackTrace) {
-      debugPrint('MP4 capture time patch failed for $filePath: $e\n$stackTrace');
+      'MP4 capture time patch failed for $filePath: $e\n$stackTrace'.log();
       return false;
     }
   }
