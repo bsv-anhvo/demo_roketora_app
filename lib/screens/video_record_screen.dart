@@ -9,6 +9,7 @@ import 'package:demo_roketota_app/providers/camera/camera_ui_actions_mixin.dart'
 import 'package:demo_roketota_app/providers/camera/camera_ui_state.dart';
 import 'package:demo_roketota_app/providers/camera/video_record_notifier.dart';
 import 'package:demo_roketota_app/providers/camera/video_record_state.dart';
+import 'package:demo_roketota_app/services/media_capture_metadata_service.dart';
 import 'package:demo_roketota_app/utils/constants.dart';
 import 'package:demo_roketota_app/utils/camera_preview_viewport.dart';
 import 'package:demo_roketota_app/utils/media_file_helper.dart';
@@ -204,7 +205,10 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
     }
   }
 
-  Future<void> _openVideoPreview(String originalStampPath) async {
+  Future<void> _openVideoPreview(
+    String originalStampPath, {
+    required DateTime capturedAt,
+  }) async {
     if (_isHandlingRecordedVideo ||
         _handledVideoStampPath == originalStampPath ||
         cameraUi.isOpeningPreview) {
@@ -238,6 +242,12 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
         await MediaFileHelper.deleteIfExists(originalStampPath);
         return;
       }
+
+      await MediaCaptureMetadataService.instance.registerVideoCapture(
+        capturedAt: capturedAt,
+        editedStampPath: editedStampPath,
+        originalStampPath: originalStampPath,
+      );
 
       _setProcessingMessage(null);
 
@@ -285,6 +295,8 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
         _notifier.startRecordTimer(isMounted: () => mounted);
         _syncRecordPulseAnimation();
       case (MediaCaptureStatus.success, false, true):
+        final DateTime capturedAt =
+            _notifier.consumeRecordingCapturedAt() ?? DateTime.now();
         _notifier.stopRecordTimer();
         if (mounted) {
           setState(() => _isHoldRecording = false);
@@ -296,10 +308,11 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
         if (path != null &&
             !_isHandlingRecordedVideo &&
             !cameraUi.isOpeningPreview) {
-          _openVideoPreview(path);
+          _openVideoPreview(path, capturedAt: capturedAt);
         }
       case (MediaCaptureStatus.failure, false, true):
         _setProcessingMessage(null);
+        _notifier.clearRecordingCapturedAt();
         _notifier.stopRecordTimer();
         if (mounted) {
           setState(() => _isHoldRecording = false);

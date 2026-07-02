@@ -98,6 +98,7 @@ class VideoRecordNotifier extends AutoDisposeNotifier<VideoRecordState>
     state = state.copyWith(
       isRecording: true,
       recordElapsed: Duration.zero,
+      recordingCapturedAt: DateTime.now(),
     );
 
     _recordTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
@@ -130,4 +131,17 @@ class VideoRecordNotifier extends AutoDisposeNotifier<VideoRecordState>
   }
 
   void stopRecordTimer() => _stopRecordTimer();
+
+  DateTime? consumeRecordingCapturedAt() {
+    final DateTime? capturedAt = state.recordingCapturedAt;
+    if (capturedAt == null) return null;
+
+    state = state.copyWith(clearRecordingCapturedAt: true);
+    return capturedAt;
+  }
+
+  void clearRecordingCapturedAt() {
+    if (state.recordingCapturedAt == null) return;
+    state = state.copyWith(clearRecordingCapturedAt: true);
+  }
 }

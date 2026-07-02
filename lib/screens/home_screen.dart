@@ -22,8 +22,10 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkLocationRequirements());
-    MediaFileHelper.clearMediaStampDirectory();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkLocationRequirements();
+      MediaFileHelper.clearMediaStampDirectory();
+    });
   }
 
   Future<void> _checkLocationRequirements() async {

@@ -1,7 +1,9 @@
 import 'dart:io';
 
 import 'package:camerawesome/camerawesome_plugin.dart';
+import 'package:demo_roketota_app/services/media_capture_metadata_service.dart';
 import 'package:demo_roketota_app/utils/video_filter_helper.dart';
+import 'package:demo_roketota_app/utils/media_metadata_helper.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:gal/gal.dart';
@@ -48,9 +50,38 @@ class MediaFileHelper {
       await for (final FileSystemEntity entity in dir.list()) {
         await entity.delete(recursive: true);
       }
+
+      await MediaMetadataHelper.deleteOrphanedMetadataSidecarsInDirectory(dir);
+      await MediaCaptureMetadataService.instance.clearUnsavedCaptures();
     } catch (e, stackTrace) {
       debugPrint('Clear media stamp directory failed: $e\n$stackTrace');
     }
+  }
+
+  static String? _captureTimestampFromPhotoOriginal(String originalStampPath) {
+    final RegExpMatch? match =
+        RegExp(r'photo_original_(\d+)\.jpg$').firstMatch(originalStampPath);
+    return match?.group(1);
+  }
+
+  static String? _captureTimestampFromVideoOriginal(String originalStampPath) {
+    final RegExpMatch? match =
+        RegExp(r'video_original_(\d+)\.mp4$').firstMatch(originalStampPath);
+    return match?.group(1);
+  }
+
+  static Future<void> _cleanupStampArtifacts({
+    String? filterStampPath,
+    String? originalStampPath,
+    String? editedStampPath,
+  }) async {
+    final List<String> paths = <String>[
+      if (filterStampPath != null) filterStampPath,
+      if (originalStampPath != null) originalStampPath,
+      if (editedStampPath != null) editedStampPath,
+    ];
+    await MediaMetadataHelper.deleteLegacyMetadataSidecars(paths);
+    await clearMediaStampDirectory();
   }
 
   static Future<CaptureRequest> photoPath(List<Sensor> sensors) async {
@@ -76,6 +107,11 @@ class MediaFileHelper {
     String? originalStampPath,
     Iterable<String> extraPaths = const <String>[],
   }) async {
+    if (originalStampPath != null) {
+      await MediaCaptureMetadataService.instance
+          .deleteCapture(originalStampPath);
+    }
+
     await deleteIfExists(filterStampPath);
     if (originalStampPath != null) {
       await deleteIfExists(originalStampPath);
@@ -83,6 +119,11 @@ class MediaFileHelper {
     for (final String path in extraPaths) {
       await deleteIfExists(path);
     }
+    await MediaMetadataHelper.deleteLegacyMetadataSidecars(<String>[
+      filterStampPath,
+      if (originalStampPath != null) originalStampPath,
+      ...extraPaths,
+    ]);
   }
 
   /// Publishes filter stamp to Gallery, moves original stamp to [roketora_media].
@@ -93,11 +134,20 @@ class MediaFileHelper {
     String? persistedOriginalPath;
 
     try {
+      await MediaCaptureMetadataService.instance
+          .applyPhotoMetadataBeforePublish(
+        filePath: filterStampPath,
+        originalStampPath: originalStampPath,
+      );
+
       final bool gallerySaved = await publishFilterPhoto(filterStampPath);
       if (!gallerySaved) return false;
 
       final Directory mediaDir = await _mediaDirectory();
-      final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+      final String timestamp = _captureTimestampFromPhotoOriginal(
+            originalStampPath,
+          ) ??
+          DateTime.now().millisecondsSinceEpoch.toString();
       persistedOriginalPath =
           '${mediaDir.path}/photo_original_$timestamp.jpg';
 
@@ -109,7 +159,24 @@ class MediaFileHelper {
         await originalFile.delete();
       }
 
-      await deleteIfExists(filterStampPath);
+      await MediaCaptureMetadataService.instance.markSaved(
+        originalStampPath: originalStampPath,
+        persistedOriginalPath: persistedOriginalPath,
+      );
+
+      final DateTime? capturedAt = await MediaCaptureMetadataService.instance
+          .getCapturedAt(originalStampPath);
+      if (capturedAt != null) {
+        await MediaMetadataHelper.writePhotoCaptureTimestamp(
+          persistedOriginalPath,
+          capturedAt,
+        );
+      }
+
+      await _cleanupStampArtifacts(
+        filterStampPath: filterStampPath,
+        originalStampPath: originalStampPath,
+      );
       return true;
     } catch (e, stackTrace) {
       debugPrint('Save confirmed photo failed: $e\n$stackTrace');
@@ -199,6 +266,11 @@ class MediaFileHelper {
     String? originalStampPath,
     Iterable<String> extraPaths = const <String>[],
   }) async {
+    if (originalStampPath != null) {
+      await MediaCaptureMetadataService.instance
+          .deleteCapture(originalStampPath);
+    }
+
     await deleteIfExists(editedStampPath);
     if (originalStampPath != null) {
       await deleteIfExists(originalStampPath);
@@ -206,6 +278,11 @@ class MediaFileHelper {
     for (final String path in extraPaths) {
       await deleteIfExists(path);
     }
+    await MediaMetadataHelper.deleteLegacyMetadataSidecars(<String>[
+      editedStampPath,
+      if (originalStampPath != null) originalStampPath,
+      ...extraPaths,
+    ]);
   }
 
   /// Publishes edited stamp to Gallery, moves original stamp to [roketora_media].
@@ -216,6 +293,12 @@ class MediaFileHelper {
     String? persistedOriginalPath;
 
     try {
+      await MediaCaptureMetadataService.instance
+          .applyVideoMetadataBeforePublish(
+        filePath: editedStampPath,
+        originalStampPath: originalStampPath,
+      );
+
       final bool gallerySaved = await publishVideo(editedStampPath);
       if (!gallerySaved) return false;
 
@@ -228,7 +311,10 @@ class MediaFileHelper {
       }
 
       final Directory mediaDir = await _mediaDirectory();
-      final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+      final String timestamp = _captureTimestampFromVideoOriginal(
+            originalStampPath,
+          ) ??
+          DateTime.now().millisecondsSinceEpoch.toString();
       persistedOriginalPath =
           '${mediaDir.path}/video_original_$timestamp.mp4';
 
@@ -239,7 +325,28 @@ class MediaFileHelper {
         await originalFile.delete();
       }
 
-      await deleteIfExists(editedStampPath);
+      await MediaCaptureMetadataService.instance.markSaved(
+        originalStampPath: originalStampPath,
+        persistedOriginalPath: persistedOriginalPath,
+      );
+
+      final DateTime? capturedAt = await MediaCaptureMetadataService.instance
+          .getCapturedAt(originalStampPath);
+      if (capturedAt != null) {
+        await MediaMetadataHelper.writeVideoCaptureTimestamp(
+          persistedOriginalPath,
+          capturedAt,
+        );
+      }
+
+      await MediaMetadataHelper.deleteOrphanedMetadataSidecarsInDirectory(
+        mediaDir,
+      );
+
+      await _cleanupStampArtifacts(
+        editedStampPath: editedStampPath,
+        originalStampPath: originalStampPath,
+      );
       return true;
     } catch (e, stackTrace) {
       debugPrint('Save confirmed video failed: $e\n$stackTrace');

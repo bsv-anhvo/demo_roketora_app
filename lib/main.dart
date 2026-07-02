@@ -1,7 +1,9 @@
+import 'package:demo_roketota_app/core/database/database_initializer.dart';
 import 'package:demo_roketota_app/l10n/app_localizations.dart';
 import 'package:demo_roketota_app/providers/locale_provider.dart';
 import 'package:demo_roketota_app/screens/home_screen.dart';
 import 'package:demo_roketota_app/utils/app_colors.dart';
+import 'package:demo_roketota_app/services/media_capture_metadata_service.dart';
 import 'package:demo_roketota_app/utils/strings.dart';
 import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit_config.dart';
 import 'package:flutter/material.dart';
@@ -10,6 +12,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await FFmpegKitConfig.init();
+  await ensureSqfliteInitialized();
+  await MediaCaptureMetadataService.instance.init(force: true);
 
   runApp(
     const ProviderScope(

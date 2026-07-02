@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:demo_roketota_app/core/models/camera_settings.dart';
+import 'package:demo_roketota_app/services/media_capture_metadata_service.dart';
 import 'package:demo_roketota_app/utils/media_file_helper.dart';
 import 'package:demo_roketota_app/utils/photo_filter_helper.dart';
 import 'package:demo_roketota_app/providers/camera/camera_ui_actions_mixin.dart';
@@ -122,12 +123,20 @@ class TakePhotoNotifier extends AutoDisposeNotifier<TakePhotoState>
       final bool succeeded = await CamerawesomePlugin.takePhoto(captureRequest);
       if (!succeeded) return null;
 
+      final DateTime capturedAt = DateTime.now();
+
       await File(paths.originalPath).copy(paths.filterPath);
 
       await Future.wait<void>(<Future<void>>[
         PhotoFilterHelper.normalizeOrientation(paths.originalPath),
         PhotoFilterHelper.applyToFile(paths.filterPath, activeFilter),
       ]);
+
+      await MediaCaptureMetadataService.instance.registerPhotoCapture(
+        capturedAt: capturedAt,
+        filterStampPath: paths.filterPath,
+        originalStampPath: paths.originalPath,
+      );
 
       return (
       filterPath: paths.filterPath,

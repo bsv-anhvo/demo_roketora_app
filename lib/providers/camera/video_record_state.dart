@@ -10,6 +10,7 @@ class VideoRecordState {
     VideoBitrateOption? videoBitrate,
     this.recordElapsed = Duration.zero,
     this.isRecording = false,
+    this.recordingCapturedAt,
   })  : videoQuality = videoQuality ?? VideoRecordingQuality.fhd,
         videoFps = videoFps ?? kVideoFpsOptions[1],
         videoBitrate = videoBitrate ?? kVideoBitrateOptions[1];
@@ -24,6 +25,7 @@ class VideoRecordState {
   final VideoBitrateOption videoBitrate;
   final Duration recordElapsed;
   final bool isRecording;
+  final DateTime? recordingCapturedAt;
 
   VideoRecordState copyWith({
     CameraUiState? camera,
@@ -32,6 +34,8 @@ class VideoRecordState {
     VideoBitrateOption? videoBitrate,
     Duration? recordElapsed,
     bool? isRecording,
+    DateTime? recordingCapturedAt,
+    bool clearRecordingCapturedAt = false,
   }) {
     return VideoRecordState(
       camera: camera ?? this.camera,
@@ -40,6 +44,9 @@ class VideoRecordState {
       videoBitrate: videoBitrate ?? this.videoBitrate,
       recordElapsed: recordElapsed ?? this.recordElapsed,
       isRecording: isRecording ?? this.isRecording,
+      recordingCapturedAt: clearRecordingCapturedAt
+          ? null
+          : (recordingCapturedAt ?? this.recordingCapturedAt),
     );
   }
 }
