@@ -86,7 +86,7 @@ const List<PhotoAspectRatioOption> kPhotoAspectRatios = [
   ),
   PhotoAspectRatioOption(
     aspectRatio: CameraAspectRatios.ratio_1_1,
-    label: 'Square',
+    label: '1:1',
   ),
   PhotoAspectRatioOption(
     aspectRatio: CameraAspectRatios.ratio_16_9,
