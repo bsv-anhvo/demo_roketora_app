@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:demo_roketota_app/core/extensions/logger_extension.dart';
 import 'package:demo_roketota_app/utils/constants.dart';
+import 'package:demo_roketota_app/utils/media_file_helper.dart';
 import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new/ffprobe_kit.dart';
 import 'package:ffmpeg_kit_flutter_new/return_code.dart';
@@ -64,7 +65,7 @@ class MediaMetadataHelper {
     Iterable<String> filePaths,
   ) async {
     for (final String filePath in filePaths) {
-      await _deleteIfExists(legacyMetadataSidecarPath(filePath));
+      await MediaFileHelper.deleteIfExists(legacyMetadataSidecarPath(filePath));
     }
   }
 
@@ -76,7 +77,7 @@ class MediaMetadataHelper {
     await for (final FileSystemEntity entity in directory.list()) {
       if (entity is! File) continue;
       if (entity.path.endsWith(_legacyMetadataSuffix)) {
-        await _deleteIfExists(entity.path);
+        await MediaFileHelper.deleteIfExists(entity.path);
       }
     }
   }
@@ -186,7 +187,7 @@ class MediaMetadataHelper {
     } catch (e, stackTrace) {
       'Write video metadata failed for $filePath: $e\n$stackTrace'.log();
     } finally {
-      await _deleteIfExists(tempPath);
+      await MediaFileHelper.deleteIfExists(tempPath);
       await deleteLegacyMetadataSidecars(<String>[filePath]);
     }
   }
@@ -340,12 +341,12 @@ class MediaMetadataHelper {
       await _writeCreationTimeFfmeta(inputPath, creationLocalWallClock),
     ];
 
-    for (final String? ffmetaPath in ffmetaPaths) {
-      if (ffmetaPath == null) continue;
+    for (final String? path in ffmetaPaths) {
+      if (path == null) continue;
       attempts.add(
         _metadataFfmetaCopyArgs(
           inputPath: inputPath,
-          ffmetaPath: ffmetaPath,
+          ffmetaPath: path,
           outputPath: outputPath,
         ),
       );
@@ -353,7 +354,7 @@ class MediaMetadataHelper {
 
     try {
       for (int index = 0; index < attempts.length; index++) {
-        await _deleteIfExists(outputPath);
+        await MediaFileHelper.deleteIfExists(outputPath);
 
         final List<String> args = attempts[index];
         final session = await FFmpegKit.executeWithArguments(args);
@@ -383,17 +384,11 @@ class MediaMetadataHelper {
 
       return false;
     } finally {
-      for (final String? ffmetaPath in ffmetaPaths) {
-        if (ffmetaPath != null) {
-          await _deleteIfExists(ffmetaPath);
+      for (final String? path in ffmetaPaths) {
+        if (path != null) {
+          await MediaFileHelper.deleteIfExists(path);
         }
       }
     }
-  }
-
-  static Future<void> _deleteIfExists(String path) async {
-    final File file = File(path);
-    if (!await file.exists()) return;
-    await file.delete();
   }
 }

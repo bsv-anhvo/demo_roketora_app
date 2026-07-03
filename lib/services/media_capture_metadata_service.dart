@@ -1,8 +1,8 @@
 import 'package:demo_roketota_app/core/database/media_database.dart';
+import 'package:demo_roketota_app/core/extensions/logger_extension.dart';
 import 'package:demo_roketota_app/core/models/media_record.dart';
 import 'package:demo_roketota_app/core/models/media_type.dart';
 import 'package:demo_roketota_app/utils/media_metadata_helper.dart';
-import 'package:flutter/foundation.dart';
 
 class MediaCaptureMetadataService {
   MediaCaptureMetadataService._();
@@ -25,7 +25,7 @@ class MediaCaptureMetadataService {
     try {
       await init();
     } catch (e, stackTrace) {
-      debugPrint('Media metadata DB init failed: $e\n$stackTrace');
+      'Media metadata DB init failed: $e\n$stackTrace'.log();
       rethrow;
     }
   }
@@ -111,7 +111,7 @@ class MediaCaptureMetadataService {
         savedAt: savedAt ?? DateTime.now(),
       );
     } catch (e, stackTrace) {
-      debugPrint('Mark media saved failed: $e\n$stackTrace');
+      'Mark media saved failed: $e\n$stackTrace'.log();
     }
   }
 
@@ -120,7 +120,7 @@ class MediaCaptureMetadataService {
       await _ensureReady();
       await _database.deleteByOriginalStampPath(originalStampPath);
     } catch (e, stackTrace) {
-      debugPrint('Delete media capture failed: $e\n$stackTrace');
+      'Delete media capture failed: $e\n$stackTrace'.log();
     }
   }
 
@@ -129,7 +129,7 @@ class MediaCaptureMetadataService {
       await _ensureReady();
       await _database.deleteUnsavedCaptures();
     } catch (e, stackTrace) {
-      debugPrint('Clear unsaved media captures failed: $e\n$stackTrace');
+      'Clear unsaved media captures failed: $e\n$stackTrace'.log();
     }
   }
 
@@ -140,7 +140,7 @@ class MediaCaptureMetadataService {
           await _database.findByOriginalStampPath(originalStampPath);
       return record?.capturedAt;
     } catch (e, stackTrace) {
-      debugPrint('Get captured at failed: $e\n$stackTrace');
+      'Get captured at failed: $e\n$stackTrace'.log();
       return null;
     }
   }
@@ -167,7 +167,7 @@ class MediaCaptureMetadataService {
 
       await writeFileMetadata();
     } catch (e, stackTrace) {
-      debugPrint('Register media capture failed: $e\n$stackTrace');
+      'Register media capture failed: $e\n$stackTrace'.log();
     }
   }
 }

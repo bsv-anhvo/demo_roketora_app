@@ -6,6 +6,9 @@ class Constants {
   static const Duration videoRecordMaxDuration = Duration(seconds: 20);
   static const Duration focusIndicatorDuration = Duration(milliseconds: 2000);
 
+  static const double defaultExposure = 0.5;
+  static const double defaultZoomLevel = 1.0;
+
   static const double buttonSize = 80;
   static const double ringSize = 96;
   static const double desiredMin = 0.5;
@@ -17,6 +20,10 @@ class Constants {
   static const String formatDateTime3 = "yyyy-MM-dd'T'HH:mm:ss";
 
   static const int versionDatabase = 1;
+
+  static const String folderNameFileOriginal = 'roketora_media';
+  static const String folderNameFileStamp = 'roketora_media_stamp';
+  static const String folderNameOnGallery = 'Roketora';
 
   static const String databaseName = 'roketora_media.db';
   static const String tableMediaRecords = 'media_records';

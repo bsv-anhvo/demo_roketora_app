@@ -38,10 +38,6 @@ class TakePhotoNotifier extends AutoDisposeNotifier<TakePhotoState>
     state = state.copyWith(timer: timer);
   }
 
-  void setPortraitEnabled(bool enabled) {
-    state = state.copyWith(portraitEnabled: enabled);
-  }
-
   void setSelectedAspectRatio(PhotoAspectRatioOption option) {
     state = state.copyWith(selectedPhotoAspectRatio: option);
   }
@@ -67,37 +63,6 @@ class TakePhotoNotifier extends AutoDisposeNotifier<TakePhotoState>
       return;
     }
     await sensorConfig.setAspectRatio(state.selectedPhotoAspectRatio.aspectRatio);
-  }
-
-  Future<void> applyPortraitMode(CameraState cameraState) async {
-    if (!state.portraitEnabled) return;
-
-    final SensorDeviceData sensors = await cameraState.getSensors();
-    final bool isFront = cameraState.sensorConfig.sensors.first.position ==
-        SensorPosition.front;
-
-    if (isFront && sensors.trueDepth != null) {
-      cameraState.setSensorType(0, SensorType.trueDepth, sensors.trueDepth!.uid);
-      return;
-    }
-
-    if (!isFront && sensors.telephoto != null) {
-      cameraState.setSensorType(0, SensorType.telephoto, sensors.telephoto!.uid);
-    }
-  }
-
-  Future<void> resetPortraitLens(CameraState cameraState) async {
-    if (state.portraitEnabled) return;
-
-    final SensorDeviceData sensors = await cameraState.getSensors();
-    final bool isFront = cameraState.sensorConfig.sensors.first.position ==
-        SensorPosition.front;
-
-    if (isFront) return;
-
-    if (sensors.wideAngle != null) {
-      cameraState.setSensorType(0, SensorType.wideAngle, sensors.wideAngle!.uid);
-    }
   }
 
   Future<({String filterPath, String originalPath})?> captureDualPhoto(

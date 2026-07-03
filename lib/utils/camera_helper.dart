@@ -182,7 +182,7 @@ class CameraHelper {
   }
 
   static Future<ZoomRange> cameraZoomLoad() async {
-    final bool useIosZoomCurve = !kIsWeb && Platform.isIOS;
+    final bool useIosZoomCurve = Platform.isIOS;
     try {
       final double? nativeMaxZoom = await CamerawesomePlugin.getMaxZoom();
 

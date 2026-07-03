@@ -1,26 +1,26 @@
 import 'dart:io';
 
 import 'package:camerawesome/camerawesome_plugin.dart';
+import 'package:demo_roketota_app/core/extensions/logger_extension.dart';
 import 'package:demo_roketota_app/services/media_capture_metadata_service.dart';
+import 'package:demo_roketota_app/utils/constants.dart';
 import 'package:demo_roketota_app/utils/video_filter_helper.dart';
 import 'package:demo_roketota_app/utils/media_metadata_helper.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:gal/gal.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:photo_manager/photo_manager.dart';
 
 class MediaFileHelper {
-  static Future<bool> deleteIfExists(String path) async {
+  static Future<void> deleteIfExists(String path) async {
     final File file = File(path);
-    if (!await file.exists()) return false;
+    if (!await file.exists()) return;
     await file.delete();
-    return true;
   }
 
   static Future<Directory> _mediaDirectory() async {
     final Directory baseDir = await getApplicationDocumentsDirectory();
-    return Directory('${baseDir.path}/roketora_media').create(recursive: true);
+    return Directory('${baseDir.path}/${Constants.folderNameFileOriginal}').create(recursive: true);
   }
 
   static Future<({String originalPath, String filterPath})> photoPairPaths() async {
@@ -34,7 +34,7 @@ class MediaFileHelper {
 
   static Future<Directory> _mediaStampDirectory() async {
     final Directory cacheDir = await getApplicationCacheDirectory();
-    return Directory('${cacheDir.path}/roketora_media_stamp')
+    return Directory('${cacheDir.path}/${Constants.folderNameFileStamp}')
         .create(recursive: true);
   }
 
@@ -54,7 +54,7 @@ class MediaFileHelper {
       await MediaMetadataHelper.deleteOrphanedMetadataSidecarsInDirectory(dir);
       await MediaCaptureMetadataService.instance.clearUnsavedCaptures();
     } catch (e, stackTrace) {
-      debugPrint('Clear media stamp directory failed: $e\n$stackTrace');
+      'Clear media stamp directory failed: $e\n$stackTrace'.log();
     }
   }
 
@@ -76,9 +76,9 @@ class MediaFileHelper {
     String? editedStampPath,
   }) async {
     final List<String> paths = <String>[
-      if (filterStampPath != null) filterStampPath,
-      if (originalStampPath != null) originalStampPath,
-      if (editedStampPath != null) editedStampPath,
+      ?filterStampPath,
+      ?originalStampPath,
+      ?editedStampPath,
     ];
     await MediaMetadataHelper.deleteLegacyMetadataSidecars(paths);
     await clearMediaStampDirectory();
@@ -121,7 +121,7 @@ class MediaFileHelper {
     }
     await MediaMetadataHelper.deleteLegacyMetadataSidecars(<String>[
       filterStampPath,
-      if (originalStampPath != null) originalStampPath,
+      ?originalStampPath,
       ...extraPaths,
     ]);
   }
@@ -179,7 +179,7 @@ class MediaFileHelper {
       );
       return true;
     } catch (e, stackTrace) {
-      debugPrint('Save confirmed photo failed: $e\n$stackTrace');
+      'Save confirmed photo failed: $e\n$stackTrace'.log();
       if (persistedOriginalPath != null) {
         await deleteIfExists(persistedOriginalPath);
       }
@@ -280,7 +280,7 @@ class MediaFileHelper {
     }
     await MediaMetadataHelper.deleteLegacyMetadataSidecars(<String>[
       editedStampPath,
-      if (originalStampPath != null) originalStampPath,
+      ?originalStampPath,
       ...extraPaths,
     ]);
   }
@@ -304,9 +304,7 @@ class MediaFileHelper {
 
       final File originalFile = File(originalStampPath);
       if (!await originalFile.exists()) {
-        debugPrint(
-          'Save video skipped: original stamp missing at $originalStampPath',
-        );
+        'Save video skipped: original stamp missing at $originalStampPath'.log();
         return false;
       }
 
@@ -349,7 +347,7 @@ class MediaFileHelper {
       );
       return true;
     } catch (e, stackTrace) {
-      debugPrint('Save confirmed video failed: $e\n$stackTrace');
+      'Save confirmed video failed: $e\n$stackTrace'.log();
       if (persistedOriginalPath != null) {
         await deleteIfExists(persistedOriginalPath);
       }
@@ -362,22 +360,20 @@ class MediaFileHelper {
   /// Returns `true` when the video was saved to the gallery.
   static Future<bool> publishVideo(String filePath) async {
     try {
-      await Gal.putVideo(filePath, album: 'Roketora');
+      await Gal.putVideo(filePath, album: Constants.folderNameOnGallery);
       return true;
     } on GalException catch (e) {
-      debugPrint('Gallery video publish failed: ${e.type.message}');
+      'Gallery video publish failed: ${e.type.message}'.log();
       return false;
     } on MissingPluginException catch (e) {
-      debugPrint(
-        'Gal plugin is not linked ($e). '
-            'Stop the app completely, then run: flutter clean && flutter pub get && flutter run',
-      );
+      'Gal plugin is not linked ($e). '
+          'Stop the app completely, then run: flutter clean && flutter pub get && flutter run'.log();
       return false;
     } on PlatformException catch (e) {
-      debugPrint('Gallery video publish platform error: $e');
+      'Gallery video publish platform error: $e'.log();
       return false;
     } catch (e, stackTrace) {
-      debugPrint('Gallery video publish failed: $e\n$stackTrace');
+      'Gallery video publish failed: $e\n$stackTrace'.log();
       return false;
     }
   }
@@ -386,22 +382,20 @@ class MediaFileHelper {
   /// Never throws — capture/preview must continue even if gallery fails.
   static Future<bool> publishFilterPhoto(String filePath) async {
     try {
-      await Gal.putImage(filePath, album: "Roketora");
+      await Gal.putImage(filePath, album: Constants.folderNameOnGallery);
       return true;
     } on GalException catch (e) {
-      debugPrint('Gallery publish failed: ${e.type.message}');
+      'Gallery publish failed: ${e.type.message}'.log();
       return false;
     } on MissingPluginException catch (e) {
-      debugPrint(
-        'Gal plugin is not linked ($e). '
-            'Stop the app completely, then run: flutter clean && flutter pub get && flutter run',
-      );
+      'Gal plugin is not linked ($e). '
+          'Stop the app completely, then run: flutter clean && flutter pub get && flutter run'.log();
       return false;
     } on PlatformException catch (e) {
-      debugPrint('Gallery publish platform error: $e');
+      'Gallery publish platform error: $e'.log();
       return false;
     } catch (e, stackTrace) {
-      debugPrint('Gallery publish failed: $e\n$stackTrace');
+      'Gallery publish failed: $e\n$stackTrace'.log();
       return false;
     }
   }
@@ -413,7 +407,7 @@ class MediaFileHelper {
       final PermissionState permission =
       await PhotoManager.requestPermissionExtend();
       if (!permission.isAuth) {
-        debugPrint('Gallery delete skipped: permission denied');
+        'Gallery delete skipped: permission denied'.log();
         return;
       }
 
@@ -447,9 +441,9 @@ class MediaFileHelper {
 
       await PhotoManager.editor.deleteWithIds(idsToDelete);
     } on MissingPluginException catch (e) {
-      debugPrint('PhotoManager plugin is not linked: $e');
+      'PhotoManager plugin is not linked: $e'.log();
     } catch (e, stackTrace) {
-      debugPrint('Gallery delete failed: $e\n$stackTrace');
+      'Gallery delete failed: $e\n$stackTrace'.log();
     }
   }
 

@@ -3,17 +3,15 @@ import 'package:demo_roketota_app/core/models/zoom_range.dart';
 import 'package:demo_roketota_app/utils/constants.dart';
 
 class CameraUiState {
-  static const double defaultExposure = 0.5;
-
   const CameraUiState({
     this.flash = FlashSetting.off,
-    this.exposure = defaultExposure,
+    this.exposure = Constants.defaultExposure,
     this.showExposureSlider = false,
     this.showFilterStrip = false,
     this.showControlPanel = false,
     this.isOpeningPreview = false,
     this.zoomRange = Constants.fallbackRange,
-    this.displayZoom = 1.0,
+    this.displayZoom = Constants.defaultZoomLevel,
     this.cameraReady = false,
     this.zoomRangeLoaded = false,
   });

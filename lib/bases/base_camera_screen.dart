@@ -13,6 +13,7 @@ import 'package:demo_roketota_app/utils/camera_helper.dart';
 import 'package:demo_roketota_app/utils/camera_preview_viewport.dart';
 import 'package:demo_roketota_app/utils/camera_preset_filters.dart';
 import 'package:demo_roketota_app/providers/locale_provider.dart';
+import 'package:demo_roketota_app/utils/constants.dart';
 import 'package:demo_roketota_app/utils/device_requirements.dart';
 import 'package:demo_roketota_app/utils/strings.dart';
 import 'package:demo_roketota_app/widgets/camera/bounded_pinch_zoom_overlay.dart';
@@ -349,7 +350,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
     return OnPreviewTap(
       onTap: (position, flutterPreviewSize, pixelPreviewSize) {
         // Re-focusing always resets exposure back to neutral.
-        cameraHost.applyExposure(CameraUiState.defaultExposure);
+        cameraHost.applyExposure(Constants.defaultExposure);
         baseTap.onTap(position, flutterPreviewSize, pixelPreviewSize);
       },
       onTapPainter: (tapPosition) => CameraFocusIndicator(

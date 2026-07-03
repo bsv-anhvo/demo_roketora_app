@@ -5,7 +5,6 @@ class TakePhotoState {
   TakePhotoState({
     required this.camera,
     this.timer = PhotoTimerOption.off,
-    this.portraitEnabled = false,
     PhotoAspectRatioOption? selectedPhotoAspectRatio,
     this.countdown,
     this.isCapturing = false,
@@ -18,7 +17,6 @@ class TakePhotoState {
 
   final CameraUiState camera;
   final PhotoTimerOption timer;
-  final bool portraitEnabled;
   final PhotoAspectRatioOption selectedPhotoAspectRatio;
   final int? countdown;
   final bool isCapturing;
@@ -26,7 +24,6 @@ class TakePhotoState {
   TakePhotoState copyWith({
     CameraUiState? camera,
     PhotoTimerOption? timer,
-    bool? portraitEnabled,
     PhotoAspectRatioOption? selectedPhotoAspectRatio,
     int? countdown,
     bool clearCountdown = false,
@@ -35,7 +32,6 @@ class TakePhotoState {
     return TakePhotoState(
       camera: camera ?? this.camera,
       timer: timer ?? this.timer,
-      portraitEnabled: portraitEnabled ?? this.portraitEnabled,
       selectedPhotoAspectRatio:
           selectedPhotoAspectRatio ?? this.selectedPhotoAspectRatio,
       countdown: clearCountdown ? null : (countdown ?? this.countdown),

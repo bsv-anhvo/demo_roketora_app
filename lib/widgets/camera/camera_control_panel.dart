@@ -1,3 +1,4 @@
+import 'package:demo_roketota_app/core/extensions/context_extension.dart';
 import 'package:demo_roketota_app/core/models/camera_settings.dart';
 import 'package:demo_roketota_app/utils/app_colors.dart';
 import 'package:demo_roketota_app/utils/strings.dart';
@@ -222,7 +223,7 @@ Future<T?> showCameraPickerSheet<T>({
                       trailing: isSelected
                           ? const Icon(Icons.check, color: AppColors.amber)
                           : null,
-                      onTap: () => Navigator.pop(context, option),
+                      onTap: () => context.pop(option),
                     );
                   },
                 ),

@@ -1,13 +1,12 @@
 import 'dart:async';
-import 'dart:developer';
 
-import 'package:demo_roketota_app/core/extensions/logger_extension.dart';
 import 'package:demo_roketota_app/core/models/zoom_range.dart';
 import 'package:demo_roketota_app/utils/app_colors.dart';
 import 'package:demo_roketota_app/utils/camera_helper.dart';
 import 'package:demo_roketota_app/widgets/camera/ios_camera_zoom_dial.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:gap/gap.dart';
 
 class IosStyleZoomSelector extends StatefulWidget {
   const IosStyleZoomSelector({
@@ -215,7 +214,7 @@ class _IosStyleZoomSelectorState extends State<IosStyleZoomSelector> {
                         ),
                         isSelected: stop == activeStop,
                       ),
-                      if (stop != stops.last) const SizedBox(width: 2),
+                      if (stop != stops.last) const Gap(2),
                     ],
                   ],
                 ),

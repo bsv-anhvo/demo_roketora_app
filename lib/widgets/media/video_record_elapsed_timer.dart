@@ -1,5 +1,6 @@
 import 'package:demo_roketota_app/utils/strings.dart';
 import 'package:flutter/material.dart';
+import 'package:gap/gap.dart';
 
 class VideoRecordElapsedTimer extends StatelessWidget {
   const VideoRecordElapsedTimer({
@@ -36,7 +37,7 @@ class VideoRecordElapsedTimer extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
             ),
-            const SizedBox(width: 8),
+            const Gap(8),
             Text(
               Strings.labelTimeRecord(_format(elapsed), _format(maxDuration)),
               style: const TextStyle(
