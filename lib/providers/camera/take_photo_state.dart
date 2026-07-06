@@ -9,7 +9,7 @@ class TakePhotoState {
     this.countdown,
     this.isCapturing = false,
   }) : selectedPhotoAspectRatio =
-            selectedPhotoAspectRatio ?? kPhotoAspectRatios.first;
+            selectedPhotoAspectRatio ?? kPhotoAspectRatios[1];
 
   factory TakePhotoState.initial() => TakePhotoState(
         camera: const CameraUiState(),

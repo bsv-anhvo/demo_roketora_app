@@ -81,12 +81,12 @@ class PhotoAspectRatioOption {
 
 const List<PhotoAspectRatioOption> kPhotoAspectRatios = [
   PhotoAspectRatioOption(
-    aspectRatio: CameraAspectRatios.ratio_4_3,
-    label: '4:3',
-  ),
-  PhotoAspectRatioOption(
     aspectRatio: CameraAspectRatios.ratio_1_1,
     label: '1:1',
+  ),
+  PhotoAspectRatioOption(
+    aspectRatio: CameraAspectRatios.ratio_4_3,
+    label: '4:3',
   ),
   PhotoAspectRatioOption(
     aspectRatio: CameraAspectRatios.ratio_16_9,
