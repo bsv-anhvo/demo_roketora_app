@@ -42,8 +42,7 @@ class _CameraFocusIndicatorState extends State<CameraFocusIndicator> {
   static const double _trackHeight = 100;
   static const double _sunSize = 18;
   static const double _hitWidth = 44;
-  static const double _sliderGap = 10;
-  static const double _edgePadding = 8;
+  static const double _sliderGap = 2;
 
   late double _exposure = widget.exposure.clamp(0.0, 1.0);
   bool _showExposureTrack = false;
@@ -111,7 +110,6 @@ class _CameraFocusIndicatorState extends State<CameraFocusIndicator> {
         final double sunSize = _sunSize * sizeFactor;
         final double hitWidth = _hitWidth * sizeFactor;
         final double sliderGap = _sliderGap * sizeFactor;
-        final double edgePadding = _edgePadding * sizeFactor;
 
         // Prefer the right side; flip to the left when there is no room.
         final double rightLeft = p.dx + targetSize / 2 + sliderGap;
@@ -120,11 +118,8 @@ class _CameraFocusIndicatorState extends State<CameraFocusIndicator> {
             ? rightLeft
             : p.dx - targetSize / 2 - sliderGap - hitWidth;
 
-        // Keep the track on screen, centered on the tap when possible.
-        final double maxTop = (maxH - trackHeight - edgePadding)
-            .clamp(edgePadding, double.infinity);
-        final double trackTop =
-            (p.dy - trackHeight / 2).clamp(edgePadding, maxTop);
+        // Center the track on the tap, matching the focus frame (no edge clamp).
+        final double trackTop = p.dy - trackHeight / 2;
 
         // Fill the preview so hit-testing reaches the handle. Without an
         // explicit size the Stack collapses around the size-less focus painter
