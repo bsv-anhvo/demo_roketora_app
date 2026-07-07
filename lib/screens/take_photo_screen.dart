@@ -49,7 +49,7 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
       _photoState.selectedPhotoAspectRatio.aspectRatio;
 
   @override
-  CameraPreviewFit get previewFit => CameraPreviewFit.contain;
+  CameraPreviewFit get previewFit => CameraPreviewFit.fitWidth;
 
   @override
   Alignment get previewAlignment => Alignment.topCenter;

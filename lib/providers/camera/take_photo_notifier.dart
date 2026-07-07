@@ -63,6 +63,14 @@ class TakePhotoNotifier extends AutoDisposeNotifier<TakePhotoState>
       return;
     }
     await sensorConfig.setAspectRatio(state.selectedPhotoAspectRatio.aspectRatio);
+
+    // On Android, changing the aspect ratio rebinds the camera use cases, which
+    // resets the native zoom to its default and discards the previously applied
+    // level. Wait for the new binding to settle (the plugin itself delays the
+    // initial zoom by 200ms), then re-apply the current display zoom so the
+    // level the user selected (e.g. 1x) is preserved after the switch.
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    await applyZoom(sensorConfig, cameraUi.displayZoom);
   }
 
   Future<({String filterPath, String originalPath})?> captureDualPhoto(

@@ -76,7 +76,7 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
       );
 
   @override
-  CameraPreviewFit get previewFit => CameraPreviewFit.contain;
+  CameraPreviewFit get previewFit => CameraPreviewFit.fitWidth;
 
   @override
   Alignment get previewAlignment => Alignment.topCenter;
