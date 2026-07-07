@@ -3,16 +3,27 @@ import 'dart:io' show Platform;
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:camerawesome/pigeon.dart';
 import 'package:demo_roketota_app/core/extensions/logger_extension.dart';
-import 'package:demo_roketota_app/core/extensions/snack_bar_extension.dart';
 import 'package:demo_roketota_app/core/models/ios_lens_capabilities.dart';
 import 'package:demo_roketota_app/core/models/zoom_range.dart';
 import 'package:demo_roketota_app/utils/constants.dart';
 import 'package:demo_roketota_app/widgets/camera/camera_focus_indicator.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 class CameraHelper {
   CameraHelper._();
+
+  /// Per-lens max optical zoom, keyed by device UID. iOS [getMaxZoom] returns
+  /// the value for the currently active lens, so we cache it after each switch
+  /// instead of hitting the method channel on every pinch frame.
+  static final Map<String, double> _iosLensMaxZoomCache = {};
+
+  static Future<double> _iosLensMaxZoom(String uid, double fallback) async {
+    final double? cached = _iosLensMaxZoomCache[uid];
+    if (cached != null) return cached;
+    final double resolved = (await CamerawesomePlugin.getMaxZoom()) ?? fallback;
+    _iosLensMaxZoomCache[uid] = resolved;
+    return resolved;
+  }
 
   /// Clamps [displayZoom] to [range] and maps it to the plugin value [0, 1].
   static ({double display, double normalized}) resolveDisplayZoom(
@@ -63,12 +74,12 @@ class CameraHelper {
     final Sensor? currentSensor = cameraState.sensorConfig.sensors.firstOrNull;
     if (currentSensor?.type != targetType) {
       cameraState.setSensorType(0, targetType, deviceId);
+      // Native rebind needs a moment before the new lens accepts a zoom value.
       await Future<void>.delayed(const Duration(milliseconds: 150));
     }
 
     final SensorConfig sensorConfig = cameraState.sensorConfig;
-    final double deviceMax =
-        (await CamerawesomePlugin.getMaxZoom()) ?? range.deviceMax;
+    final double deviceMax = await _iosLensMaxZoom(deviceId, range.deviceMax);
     final double normalized = ZoomRange.iosMultiLensToNormalized(
       displayZoom,
       deviceMax,
@@ -187,14 +198,20 @@ class CameraHelper {
     );
   }
 
+  /// Rounding band used by [formatZoomLabel] to snap a near-integer zoom to its
+  /// integer label (e.g. 0.97x renders "1×"). Active-stop selection reuses it so
+  /// the highlighted pill always matches the value it displays.
+  static const double _labelSnapTolerance = 0.05;
+
   /// Returns the stop that should appear active for [displayZoom] using floor
   /// semantics: 1.x belongs to the 1x stop, 2.x to the 2x stop, and >=3.0 to
-  /// the 3x stop. Falls back to the first stop when [displayZoom] is below it.
+  /// the 3x stop. A value sitting just below a stop (within [_labelSnapTolerance])
+  /// snaps up to it so the highlight stays in sync with the rounded label
+  /// (e.g. 0.98x highlights and shows "1×" on the 1x stop, not the 0.5x stop).
   static double cameraZoomActiveStop(double displayZoom, List<double> stops) {
-    const double epsilon = 0.001;
     double active = stops.first;
     for (final double stop in stops) {
-      if (displayZoom >= stop - epsilon) {
+      if (displayZoom > stop - _labelSnapTolerance) {
         active = stop;
       } else {
         break;

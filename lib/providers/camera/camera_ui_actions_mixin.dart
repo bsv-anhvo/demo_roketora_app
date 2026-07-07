@@ -23,7 +23,9 @@ abstract interface class CameraUiHost {
 
 /// Shared camera UI mutations for photo and video notifiers.
 mixin CameraUiActions<S> on AutoDisposeNotifier<S> implements CameraUiHost {
-  Future<void>? _zoomApplyChain;
+  double? _pendingZoom;
+  CameraState? _pendingZoomState;
+  bool _zoomProcessing = false;
 
   @override
   CameraUiState get cameraUi;
@@ -96,16 +98,31 @@ mixin CameraUiActions<S> on AutoDisposeNotifier<S> implements CameraUiHost {
   }
 
   @override
-  Future<void> applyZoom(CameraState cameraState, double zoom) {
-    _zoomApplyChain = (_zoomApplyChain ?? Future<void>.value()).then((_) async {
-      final double clamped = await CameraHelper.applyDisplayZoom(
-        cameraState: cameraState,
-        range: cameraUi.zoomRange,
-        displayZoom: zoom,
-      );
-      setDisplayZoom(clamped);
-    });
-    return _zoomApplyChain!;
+  Future<void> applyZoom(CameraState cameraState, double zoom) async {
+    // Coalesce rapid pinch updates: keep only the latest target so a slow
+    // native op (e.g. lens switch) never causes a backlog of stale frames.
+    _pendingZoom = zoom;
+    _pendingZoomState = cameraState;
+    if (_zoomProcessing) return;
+
+    _zoomProcessing = true;
+    try {
+      while (_pendingZoom != null) {
+        final double target = _pendingZoom!;
+        final CameraState state = _pendingZoomState!;
+        _pendingZoom = null;
+        _pendingZoomState = null;
+
+        final double clamped = await CameraHelper.applyDisplayZoom(
+          cameraState: state,
+          range: cameraUi.zoomRange,
+          displayZoom: target,
+        );
+        setDisplayZoom(clamped);
+      }
+    } finally {
+      _zoomProcessing = false;
+    }
   }
 
   @override
