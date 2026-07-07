@@ -52,9 +52,14 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
   /// to a centered viewport so iOS and Android stay aligned.
   double? get targetPreviewWidthOverHeight => null;
 
+  /// Whether a manual aspect-ratio mask should be drawn over the preview.
+  /// Independent of [previewFit] so ratios like 1:1 stay masked with fitWidth too.
+  bool get _hasViewportMask => targetPreviewWidthOverHeight != null;
+
+  /// Contain-fit needs the preview forced to cover + centered under the mask so
+  /// iOS and Android stay aligned. Other fits keep their own fit/alignment.
   bool get _usesViewportContain =>
-      previewFit == CameraPreviewFit.contain &&
-      targetPreviewWidthOverHeight != null;
+      previewFit == CameraPreviewFit.contain && _hasViewportMask;
   SaveConfig buildSaveConfig();
   bool get needsMicrophonePermission => true;
 
@@ -369,7 +374,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
 
   Widget _buildPreviewDecorator(CameraState state, AnalysisPreview preview) {
     _latestPreviewScale = preview.scale;
-    final bool useViewportMask = _usesViewportContain;
+    final bool useViewportMask = _hasViewportMask;
 
     return Stack(
       fit: StackFit.expand,
@@ -390,9 +395,8 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
   }
 
   Widget _buildCameraAwesome() {
-    final bool useViewportMask = _usesViewportContain;
     final CameraPreviewFit effectivePreviewFit =
-        useViewportMask ? CameraPreviewFit.cover : previewFit;
+        _usesViewportContain ? CameraPreviewFit.cover : previewFit;
     return CameraAwesomeBuilder.awesome(
       saveConfig: buildSaveConfig(),
       sensorConfig: SensorConfig.single(
