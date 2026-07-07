@@ -128,7 +128,7 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
 
     if (picked != null && picked != _photoState.selectedPhotoAspectRatio) {
       _notifier.setSelectedAspectRatio(picked);
-      await _notifier.applyPhotoAspectRatio(state.sensorConfig);
+      await _notifier.applyPhotoAspectRatio(state);
     }
   }
 

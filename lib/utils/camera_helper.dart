@@ -4,6 +4,7 @@ import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:camerawesome/pigeon.dart';
 import 'package:demo_roketota_app/core/extensions/logger_extension.dart';
 import 'package:demo_roketota_app/core/extensions/snack_bar_extension.dart';
+import 'package:demo_roketota_app/core/models/ios_lens_capabilities.dart';
 import 'package:demo_roketota_app/core/models/zoom_range.dart';
 import 'package:demo_roketota_app/utils/constants.dart';
 import 'package:demo_roketota_app/widgets/camera/camera_focus_indicator.dart';
@@ -24,14 +25,57 @@ class CameraHelper {
   }
 
   static Future<double> applyDisplayZoom({
-    required SensorConfig sensorConfig,
+    required CameraState cameraState,
     required ZoomRange range,
     required double displayZoom,
   }) async {
+    final SensorConfig sensorConfig = cameraState.sensorConfig;
+    final Sensor? activeSensor = sensorConfig.sensors.firstOrNull;
+    final double clamped = range.clampDisplayZoom(displayZoom);
+
+    if (range.iosLenses != null &&
+        activeSensor?.position != SensorPosition.front) {
+      return _applyIosMultiLensZoom(
+        cameraState: cameraState,
+        range: range,
+        displayZoom: clamped,
+      );
+    }
+
     final ({double display, double normalized}) resolved =
-        resolveDisplayZoom(range, displayZoom);
+        resolveDisplayZoom(range, clamped);
     await sensorConfig.setZoom(resolved.normalized);
     return resolved.display;
+  }
+
+  static Future<double> _applyIosMultiLensZoom({
+    required CameraState cameraState,
+    required ZoomRange range,
+    required double displayZoom,
+  }) async {
+    final IosLensCapabilities lenses = range.iosLenses!;
+    final bool useUltraWide = range.iosLensWantsUltraWide(displayZoom);
+    final SensorType targetType =
+        useUltraWide ? SensorType.ultraWideAngle : SensorType.wideAngle;
+    final String deviceId =
+        useUltraWide ? lenses.ultraWide.uid : lenses.wide.uid;
+
+    final Sensor? currentSensor = cameraState.sensorConfig.sensors.firstOrNull;
+    if (currentSensor?.type != targetType) {
+      cameraState.setSensorType(0, targetType, deviceId);
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+    }
+
+    final SensorConfig sensorConfig = cameraState.sensorConfig;
+    final double deviceMax =
+        (await CamerawesomePlugin.getMaxZoom()) ?? range.deviceMax;
+    final double normalized = ZoomRange.iosMultiLensToNormalized(
+      displayZoom,
+      deviceMax,
+    );
+
+    await sensorConfig.setZoom(normalized);
+    return displayZoom;
   }
 
   /// Applies exposure compensation. [normalized] is in [0,1]; 0.5 is neutral.
@@ -186,13 +230,25 @@ class CameraHelper {
     try {
       final double? nativeMaxZoom = await CamerawesomePlugin.getMaxZoom();
 
-      // iOS getMinZoom() returns the int literal 0, which the plugin's pigeon
-      // layer fails to cast to double and throws on. iOS optical min is always
-      // 1x anyway, so skip the call there and only read it on Android.
+      IosLensCapabilities? iosLenses;
+      if (useIosZoomCurve) {
+        final SensorDeviceData sensors = await CamerawesomePlugin.getSensors();
+        if (sensors.ultraWideAngle != null && sensors.wideAngle != null) {
+          iosLenses = IosLensCapabilities(
+            ultraWide: sensors.ultraWideAngle!,
+            wide: sensors.wideAngle!,
+          );
+        }
+      }
+
+      // iOS getMinZoom() always returns 0 (hard-coded in the plugin) and can
+      // throw on pigeon cast; Android reports the real minZoomRatio.
       final double? nativeMin =
           useIosZoomCurve ? null : await CamerawesomePlugin.getMinZoom();
 
-      'Camera zoom native range: $nativeMin - $nativeMaxZoom'.log();
+      'Camera zoom native range: $nativeMin - $nativeMaxZoom, '
+              'iosLenses: ${iosLenses != null}'
+          .log();
 
       if (nativeMaxZoom == null || nativeMaxZoom <= 0) {
         return Constants.fallbackRange;
@@ -201,15 +257,14 @@ class CameraHelper {
         return Constants.fallbackRange;
       }
 
-      // iOS getMinZoom() returns 0 but optical min is 1x; Android uses minZoomRatio.
       final double opticalMin = useIosZoomCurve
-          ? 1.0
+          ? (iosLenses != null
+              ? IosLensCapabilities.ultraWideDisplayFactor
+              : 1.0)
           : (nativeMin! <= 0 ? 1.0 : nativeMin);
       final double opticalMax = nativeMaxZoom;
       final double displayMin =
           Constants.desiredMin.clamp(opticalMin, opticalMax);
-      // Pinch can reach the device's real max on both platforms; the preset
-      // stops are still capped to desiredMax in cameraZoomBuildStops().
       final double displayMax = opticalMax;
 
       'Camera zoom optical range: $opticalMin - $opticalMax, '
@@ -222,6 +277,7 @@ class CameraHelper {
         deviceMin: opticalMin,
         deviceMax: opticalMax,
         useIosZoomCurve: useIosZoomCurve,
+        iosLenses: iosLenses,
       );
     } catch (e) {
       'Camera zoom load failed: $e'.log();

@@ -270,7 +270,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
     return IosStyleZoomSelector(
       range: cameraUi.zoomRange,
       displayZoom: cameraUi.displayZoom,
-      onZoomSelected: (zoom) => cameraHost.applyZoom(state.sensorConfig, zoom),
+      onZoomSelected: (zoom) => cameraHost.applyZoom(state, zoom),
     );
   }
 
@@ -387,8 +387,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
         BoundedPinchZoomOverlay(
           range: cameraUi.zoomRange,
           displayZoom: cameraUi.displayZoom,
-          onDisplayZoom: (zoom) =>
-              cameraHost.applyZoom(state.sensorConfig, zoom),
+          onDisplayZoom: (zoom) => cameraHost.applyZoom(state, zoom),
         ),
       ],
     );

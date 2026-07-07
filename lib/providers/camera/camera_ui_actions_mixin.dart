@@ -13,7 +13,7 @@ abstract interface class CameraUiHost {
   void toggleExposureSlider();
   Future<void> applyFlash(SensorConfig sensorConfig);
   Future<void> applyExposure(double value);
-  Future<void> applyZoom(SensorConfig sensorConfig, double zoom);
+  Future<void> applyZoom(CameraState cameraState, double zoom);
   void setDisplayZoom(double zoom);
   void setOpeningPreview(bool value);
   void resetCameraSession();
@@ -96,10 +96,10 @@ mixin CameraUiActions<S> on AutoDisposeNotifier<S> implements CameraUiHost {
   }
 
   @override
-  Future<void> applyZoom(SensorConfig sensorConfig, double zoom) {
+  Future<void> applyZoom(CameraState cameraState, double zoom) {
     _zoomApplyChain = (_zoomApplyChain ?? Future<void>.value()).then((_) async {
       final double clamped = await CameraHelper.applyDisplayZoom(
-        sensorConfig: sensorConfig,
+        cameraState: cameraState,
         range: cameraUi.zoomRange,
         displayZoom: zoom,
       );
@@ -118,7 +118,7 @@ mixin CameraUiActions<S> on AutoDisposeNotifier<S> implements CameraUiHost {
       displayZoom: zoomToApply,
     );
 
-    await applyZoom(state.sensorConfig, zoomToApply);
+    await applyZoom(state, zoomToApply);
   }
 
   @override

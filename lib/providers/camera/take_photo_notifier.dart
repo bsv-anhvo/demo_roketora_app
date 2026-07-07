@@ -58,7 +58,8 @@ class TakePhotoNotifier extends AutoDisposeNotifier<TakePhotoState>
     Future.microtask(() => applyCameraReadyBaseSync(cameraState));
   }
 
-  Future<void> applyPhotoAspectRatio(SensorConfig sensorConfig) async {
+  Future<void> applyPhotoAspectRatio(CameraState cameraState) async {
+    final SensorConfig sensorConfig = cameraState.sensorConfig;
     if (sensorConfig.aspectRatio == state.selectedPhotoAspectRatio.aspectRatio) {
       return;
     }
@@ -70,7 +71,7 @@ class TakePhotoNotifier extends AutoDisposeNotifier<TakePhotoState>
     // initial zoom by 200ms), then re-apply the current display zoom so the
     // level the user selected (e.g. 1x) is preserved after the switch.
     await Future<void>.delayed(const Duration(milliseconds: 250));
-    await applyZoom(sensorConfig, cameraUi.displayZoom);
+    await applyZoom(cameraState, cameraUi.displayZoom);
   }
 
   Future<({String filterPath, String originalPath})?> captureDualPhoto(
