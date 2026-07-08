@@ -56,10 +56,6 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
   /// Independent of [previewFit] so ratios like 1:1 stay masked with fitWidth too.
   bool get _hasViewportMask => targetPreviewWidthOverHeight != null;
 
-  /// Contain-fit needs the preview forced to cover + centered under the mask so
-  /// iOS and Android stay aligned. Other fits keep their own fit/alignment.
-  bool get _usesViewportContain =>
-      previewFit == CameraPreviewFit.contain && _hasViewportMask;
   SaveConfig buildSaveConfig();
   bool get needsMicrophonePermission => true;
 
@@ -72,9 +68,6 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
   /// Latest cover/contain scale from [AnalysisPreview], used to keep the focus
   /// indicator a consistent on-screen size inside InteractiveViewer.
   double _latestPreviewScale = 1.0;
-
-  Alignment get _effectivePreviewAlignment =>
-      _usesViewportContain ? Alignment.center : previewAlignment;
 
   @override
   void initState() {
@@ -374,12 +367,11 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
 
   Widget _buildPreviewDecorator(CameraState state, AnalysisPreview preview) {
     _latestPreviewScale = preview.scale;
-    final bool useViewportMask = _hasViewportMask;
 
     return Stack(
       fit: StackFit.expand,
       children: [
-        if (useViewportMask)
+        if (_hasViewportMask)
           CameraPreviewViewportOverlay(
             widthOverHeight: targetPreviewWidthOverHeight!,
             alignment: previewAlignment,
@@ -394,8 +386,6 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
   }
 
   Widget _buildCameraAwesome() {
-    final CameraPreviewFit effectivePreviewFit =
-        _usesViewportContain ? CameraPreviewFit.cover : previewFit;
     return CameraAwesomeBuilder.awesome(
       saveConfig: buildSaveConfig(),
       sensorConfig: SensorConfig.single(
@@ -404,8 +394,8 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
         aspectRatio: initialAspectRatio,
       ),
       enablePhysicalButton: true,
-      previewFit: effectivePreviewFit,
-      previewAlignment: _effectivePreviewAlignment,
+      previewFit: previewFit,
+      previewAlignment: previewAlignment,
       previewDecoratorBuilder: _buildPreviewDecorator,
       theme: AwesomeTheme(
         bottomActionsBackgroundColor: Colors.transparent,
