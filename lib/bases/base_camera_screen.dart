@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:demo_roketota_app/core/extensions/context_extension.dart';
@@ -26,6 +27,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
+
+import '../core/extensions/camera_aspect_ratio_extension.dart';
 
 /// How long the tap-to-focus overlay (frame + exposure handle) stays visible.
 const Duration _focusOverlayDuration = Duration(seconds: 4);
@@ -371,11 +374,11 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
     return Stack(
       fit: StackFit.expand,
       children: [
-        if (_hasViewportMask)
-          CameraPreviewViewportOverlay(
-            widthOverHeight: targetPreviewWidthOverHeight!,
-            alignment: previewAlignment,
-          ),
+        // if (_hasViewportMask)
+        //   CameraPreviewViewportOverlay(
+        //     widthOverHeight: targetPreviewWidthOverHeight!,
+        //     alignment: previewAlignment,
+        //   ),
         BoundedPinchZoomOverlay(
           range: cameraUi.zoomRange,
           displayZoom: cameraUi.displayZoom,
@@ -385,35 +388,92 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
     );
   }
 
-  Widget _buildCameraAwesome() {
-    return CameraAwesomeBuilder.awesome(
-      saveConfig: buildSaveConfig(),
-      sensorConfig: SensorConfig.single(
-        sensor: Sensor.position(SensorPosition.back),
-        flashMode: cameraHost.flashMode,
-        aspectRatio: initialAspectRatio,
+  Widget _buildCameraAwesome({
+    required double width,
+    required double height,
+  }) {
+    return SizedBox(
+      width: width,
+      height: height,
+      child: CameraAwesomeBuilder.awesome(
+        saveConfig: buildSaveConfig(),
+        sensorConfig: SensorConfig.single(
+          sensor: Sensor.position(SensorPosition.back),
+          flashMode: cameraHost.flashMode,
+          aspectRatio: initialAspectRatio,
+        ),
+        enablePhysicalButton: true,
+        previewFit: previewFit,
+        previewAlignment: previewAlignment,
+        previewDecoratorBuilder: _buildPreviewDecorator,
+        theme: AwesomeTheme(
+          bottomActionsBackgroundColor: Colors.transparent,
+        ),
+        availableFilters: cameraPresetFilters,
+        onPreviewScaleBuilder: (_) => OnPreviewScale(onScale: (_) {}),
+        onPreviewTapBuilder: _buildPreviewTap,
+        onMediaCaptureEvent: (event) => handleCaptureEvent(context, event),
+        topActionsBuilder: (state) {
+          state.when(
+            onPhotoMode: onCameraReady,
+            onVideoMode: onCameraReady,
+            onVideoRecordingMode: onCameraReady,
+          );
+          return const SizedBox.shrink();
+        },
+        middleContentBuilder: buildMiddleContentWrapper,
+        bottomActionsBuilder: buildBottomBar,
       ),
-      enablePhysicalButton: true,
-      previewFit: previewFit,
-      previewAlignment: previewAlignment,
-      previewDecoratorBuilder: _buildPreviewDecorator,
-      theme: AwesomeTheme(
-        bottomActionsBackgroundColor: Colors.transparent,
-      ),
-      availableFilters: cameraPresetFilters,
-      onPreviewScaleBuilder: (_) => OnPreviewScale(onScale: (_) {}),
-      onPreviewTapBuilder: _buildPreviewTap,
-      onMediaCaptureEvent: (event) => handleCaptureEvent(context, event),
-      topActionsBuilder: (state) {
-        state.when(
-          onPhotoMode: onCameraReady,
-          onVideoMode: onCameraReady,
-          onVideoRecordingMode: onCameraReady,
-        );
-        return const SizedBox.shrink();
-      },
-      middleContentBuilder: buildMiddleContentWrapper,
-      bottomActionsBuilder: buildBottomBar,
+    );
+  }
+
+  Widget _buildCameraArea(BoxConstraints constraints) {
+    final double widthScreen = constraints.maxWidth;
+    final double heightPreview = widthScreen * initialAspectRatio.value;
+    final double heightMask = math.max(
+      0,
+      (constraints.maxHeight - heightPreview) / 2,
+    );
+
+    return Column(
+      children: [
+        if (heightMask > 0)
+          Container(
+            width: double.infinity,
+            height: heightMask,
+            color: Colors.lightGreenAccent,
+          ),
+        // Clip the preview so ratios the sensor can't produce natively
+        // (e.g. 1:1 on Android, where the stream stays 4:3) are cropped to a
+        // centered viewport instead of overflowing onto the letterbox masks.
+        SizedBox(
+          width: widthScreen,
+          height: heightPreview,
+          child: ClipRect(
+            child: Stack(
+              children: [
+                if (_cameraRunning)
+                  KeyedSubtree(
+                    key: ValueKey('${cameraWidgetKey}_$_cameraSession'),
+                    child: _buildCameraAwesome(
+                      width: widthScreen,
+                      height: heightPreview,
+                    ),
+                  )
+                else
+                  const ColoredBox(color: AppColors.black),
+                if (buildOverlay() != null) buildOverlay()!,
+              ],
+            ),
+          ),
+        ),
+        if (heightMask > 0)
+          Container(
+            width: double.infinity,
+            height: heightMask,
+            color: Colors.lightGreenAccent,
+          ),
+      ],
     );
   }
 
@@ -429,18 +489,10 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
             Expanded(
               child: _checkingPermissions || !_permissionsReady
                   ? _buildPermissionGate()
-                  : Stack(
-                children: [
-                  if (_cameraRunning)
-                    KeyedSubtree(
-                      key: ValueKey('${cameraWidgetKey}_$_cameraSession'),
-                      child: _buildCameraAwesome(),
-                    )
-                  else
-                    const ColoredBox(color: AppColors.black),
-                  if (buildOverlay() != null) buildOverlay()!,
-                ],
-              ),
+                  : LayoutBuilder(
+                      builder: (context, constraints) =>
+                          _buildCameraArea(constraints),
+                    ),
             ),
           ],
         ),

@@ -1,19 +1,10 @@
 import 'dart:math' as math;
 
-import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:flutter/material.dart';
 
 /// Portrait viewport helpers for aspect-ratio preview masking.
 class CameraPreviewViewport {
   const CameraPreviewViewport._();
-
-  static double widthOverHeight(CameraAspectRatios ratio) {
-    return switch (ratio) {
-      CameraAspectRatios.ratio_4_3 => 3 / 4,
-      CameraAspectRatios.ratio_16_9 => 9 / 16,
-      CameraAspectRatios.ratio_1_1 => 1,
-    };
-  }
 
   /// Native-style sizing: always use full available width (e.g. 16:9 edge-to-edge).
   static Size sizeForFillWidth({
@@ -45,7 +36,7 @@ class CameraPreviewViewport {
   }
 }
 
-/// Black bars outside the active preview viewport (preview stays full-screen underneath).
+/// Top/bottom letterbox bars outside the active preview viewport.
 class CameraPreviewViewportOverlay extends StatelessWidget {
   const CameraPreviewViewportOverlay({
     super.key,
@@ -107,23 +98,7 @@ class CameraPreviewViewportOverlay extends StatelessWidget {
                       left: 0,
                       right: 0,
                       height: origin.dy,
-                      child: const ColoredBox(color: Colors.black),
-                    ),
-                  if (origin.dx > 0)
-                    Positioned(
-                      top: origin.dy,
-                      left: 0,
-                      width: origin.dx,
-                      height: animatedSize.height,
-                      child: const ColoredBox(color: Colors.black),
-                    ),
-                  if (origin.dx + animatedSize.width < maxWidth)
-                    Positioned(
-                      top: origin.dy,
-                      left: origin.dx + animatedSize.width,
-                      right: 0,
-                      height: animatedSize.height,
-                      child: const ColoredBox(color: Colors.black),
+                      child: const ColoredBox(color: Colors.black54),
                     ),
                   if (bottomBarTop < maxHeight)
                     Positioned(
@@ -131,7 +106,7 @@ class CameraPreviewViewportOverlay extends StatelessWidget {
                       left: 0,
                       right: 0,
                       bottom: 0,
-                      child: const ColoredBox(color: Colors.black),
+                      child: const ColoredBox(color: Colors.black54),
                     ),
                 ],
               );

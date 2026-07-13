@@ -1,12 +1,12 @@
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:demo_roketota_app/bases/base_camera_screen.dart';
+import 'package:demo_roketota_app/core/extensions/camera_aspect_ratio_extension.dart';
 import 'package:demo_roketota_app/core/extensions/snack_bar_extension.dart';
 import 'package:demo_roketota_app/core/models/camera_settings.dart';
 import 'package:demo_roketota_app/providers/camera/camera_ui_actions_mixin.dart';
 import 'package:demo_roketota_app/providers/camera/camera_ui_state.dart';
 import 'package:demo_roketota_app/providers/camera/take_photo_notifier.dart';
 import 'package:demo_roketota_app/providers/camera/take_photo_state.dart';
-import 'package:demo_roketota_app/utils/camera_preview_viewport.dart';
 import 'package:demo_roketota_app/utils/media_file_helper.dart';
 import 'package:demo_roketota_app/utils/strings.dart';
 import 'package:demo_roketota_app/widgets/common/app_camera_capture_button.dart';
@@ -49,15 +49,13 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
       _photoState.selectedPhotoAspectRatio.aspectRatio;
 
   @override
-  CameraPreviewFit get previewFit => CameraPreviewFit.contain;
+  CameraPreviewFit get previewFit => CameraPreviewFit.fitWidth;
 
   @override
   Alignment get previewAlignment => Alignment.center;
 
   @override
-  double? get targetPreviewWidthOverHeight => CameraPreviewViewport.widthOverHeight(
-        _photoState.selectedPhotoAspectRatio.aspectRatio,
-      );
+  double? get targetPreviewWidthOverHeight => _photoState.selectedPhotoAspectRatio.aspectRatio.value;
 
   @override
   SaveConfig buildSaveConfig() {

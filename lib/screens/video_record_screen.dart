@@ -3,6 +3,7 @@ import 'dart:io' show Platform;
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:camerawesome/pigeon.dart';
 import 'package:demo_roketota_app/bases/base_camera_screen.dart';
+import 'package:demo_roketota_app/core/extensions/camera_aspect_ratio_extension.dart';
 import 'package:demo_roketota_app/core/extensions/snack_bar_extension.dart';
 import 'package:demo_roketota_app/core/models/camera_settings.dart';
 import 'package:demo_roketota_app/providers/camera/camera_ui_actions_mixin.dart';
@@ -11,7 +12,6 @@ import 'package:demo_roketota_app/providers/camera/video_record_notifier.dart';
 import 'package:demo_roketota_app/providers/camera/video_record_state.dart';
 import 'package:demo_roketota_app/services/media_capture_metadata_service.dart';
 import 'package:demo_roketota_app/utils/constants.dart';
-import 'package:demo_roketota_app/utils/camera_preview_viewport.dart';
 import 'package:demo_roketota_app/utils/media_file_helper.dart';
 import 'package:demo_roketota_app/utils/strings.dart';
 import 'package:demo_roketota_app/widgets/common/app_camera_capture_button.dart';
@@ -82,8 +82,7 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
   Alignment get previewAlignment => Alignment.center;
 
   @override
-  double? get targetPreviewWidthOverHeight =>
-      CameraPreviewViewport.widthOverHeight(kVideoRecordAspectRatio);
+  double? get targetPreviewWidthOverHeight => kVideoRecordAspectRatio.value;
 
   @override
   CameraAspectRatios get initialAspectRatio => kVideoRecordAspectRatio;
