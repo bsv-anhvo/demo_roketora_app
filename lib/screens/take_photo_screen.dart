@@ -208,7 +208,7 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
   }
 
   @override
-  Widget? buildOverlay() {
+  Widget? buildOverlay({double topBarHeight = 0}) {
     final int? countdown = _photoState.countdown;
     final String? processingMessage = _processingMessage;
 

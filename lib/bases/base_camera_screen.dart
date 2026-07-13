@@ -28,6 +28,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 
 import '../core/extensions/camera_aspect_ratio_extension.dart';
+import '../widgets/camera/mask_bar.dart';
 
 /// How long the tap-to-focus overlay (frame + exposure handle) stays visible.
 const Duration _focusOverlayDuration = Duration(seconds: 4);
@@ -68,6 +69,21 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
   double _latestPreviewScale = 1.0;
 
   CameraState? _cameraState;
+
+  final GlobalKey _topBarKey = GlobalKey();
+
+  /// Measured height of [buildTopBar]; used to inset [buildOverlay].
+  /// Seeded with IconButton (48) + AppTopBar vertical padding (8).
+  double _topBarHeight = 56;
+
+  void _measureTopBarHeight() {
+    final RenderBox? box =
+        _topBarKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return;
+    final double height = box.size.height;
+    if ((height - _topBarHeight).abs() < 0.5) return;
+    setState(() => _topBarHeight = height);
+  }
 
   @override
   void initState() {
@@ -233,7 +249,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
   void handleCaptureEvent(BuildContext context, MediaCapture event);
   Widget buildMiddleContent(CameraState state);
   Widget buildBottomBar(CameraState state);
-  Widget? buildOverlay() => null;
+  Widget? buildOverlay({double topBarHeight = 0}) => null;
 
   Widget buildTopBar() {
     return AppTopBar(
@@ -415,10 +431,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
     );
   }
 
-  Widget _buildCameraAwesome({
-    required double width,
-    required double height,
-  }) {
+  Widget _buildCameraAwesome({required double width, required double height}) {
     return SizedBox(
       width: width,
       height: height,
@@ -459,6 +472,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
       0,
       (constraints.maxHeight - heightPreview) / 2,
     );
+    final Widget? overlay = buildOverlay(topBarHeight: _topBarHeight);
 
     return Stack(
       fit: StackFit.expand,
@@ -473,26 +487,10 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
           )
         else
           const ColoredBox(color: AppColors.black),
-        if (buildOverlay() != null) buildOverlay()!,
+        ?overlay,
         if (isPhotoMode && heightMask > 0) ...[
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            height: heightMask,
-            child: const IgnorePointer(
-              child: ColoredBox(color: Colors.black),
-            ),
-          ),
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: heightMask,
-            child: const IgnorePointer(
-              child: ColoredBox(color: Colors.black),
-            ),
-          ),
+          MaskBar(top: 0, height: heightMask),
+          MaskBar(bottom: 0, height: heightMask),
         ],
       ],
     );
@@ -500,6 +498,8 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
 
   @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) => _measureTopBarHeight());
+
     return Scaffold(
       backgroundColor: AppColors.black,
       body: SafeArea(
@@ -507,18 +507,20 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Column(
-              children: [
-                buildTopBar(),
-                Expanded(
-                  child: _checkingPermissions || !_permissionsReady
+            LayoutBuilder(
+              builder: (context, constraints) =>
+                  _checkingPermissions || !_permissionsReady
                       ? _buildPermissionGate()
-                      : LayoutBuilder(
-                          builder: (context, constraints) =>
-                              _buildCameraArea(constraints),
-                        ),
-                ),
-              ],
+                      : _buildCameraArea(constraints),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              top: 0,
+              child: KeyedSubtree(
+                key: _topBarKey,
+                child: buildTopBar(),
+              ),
             ),
             if (_permissionsReady && !_checkingPermissions)
               Positioned(

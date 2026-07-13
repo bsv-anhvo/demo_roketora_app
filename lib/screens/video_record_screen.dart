@@ -369,7 +369,7 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
   }
 
   @override
-  Widget? buildOverlay() {
+  Widget? buildOverlay({double topBarHeight = 0}) {
     final bool isRecording = _videoState.isRecording;
     final bool showRecordFx = _isHoldRecording || isRecording;
     final String? processingMessage = _processingMessage;
@@ -405,7 +405,7 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
           Align(
             alignment: Alignment.topCenter,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+              padding: EdgeInsets.fromLTRB(24, 24 + topBarHeight, 24, 0),
               child: isRecording ? VideoRecordElapsedTimer(
                 elapsed: _videoState.recordElapsed,
                 maxDuration: maxDuration,
