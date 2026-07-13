@@ -334,8 +334,8 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
     final CameraUiState ui = cameraUi;
 
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        const Spacer(),
         if (ui.showFilterStrip) ...[
           buildFilterStrip(state),
           const SizedBox(height: 8),

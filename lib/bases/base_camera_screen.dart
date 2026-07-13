@@ -11,7 +11,6 @@ import 'package:demo_roketota_app/screens/photo_preview_screen.dart';
 import 'package:demo_roketota_app/screens/video_preview_screen.dart';
 import 'package:demo_roketota_app/utils/app_colors.dart';
 import 'package:demo_roketota_app/utils/camera_helper.dart';
-import 'package:demo_roketota_app/utils/camera_preview_viewport.dart';
 import 'package:demo_roketota_app/utils/camera_preset_filters.dart';
 import 'package:demo_roketota_app/providers/locale_provider.dart';
 import 'package:demo_roketota_app/utils/constants.dart';
@@ -55,10 +54,6 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
   /// to a centered viewport so iOS and Android stay aligned.
   double? get targetPreviewWidthOverHeight => null;
 
-  /// Whether a manual aspect-ratio mask should be drawn over the preview.
-  /// Independent of [previewFit] so ratios like 1:1 stay masked with fitWidth too.
-  bool get _hasViewportMask => targetPreviewWidthOverHeight != null;
-
   SaveConfig buildSaveConfig();
   bool get needsMicrophonePermission => true;
 
@@ -71,6 +66,8 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
   /// Latest cover/contain scale from [AnalysisPreview], used to keep the focus
   /// indicator a consistent on-screen size inside InteractiveViewer.
   double _latestPreviewScale = 1.0;
+
+  CameraState? _cameraState;
 
   @override
   void initState() {
@@ -139,7 +136,10 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
       _pausedForLifecycle = true;
     }
     cameraHost.resetCameraSession();
-    setState(() => _cameraRunning = false);
+    setState(() {
+      _cameraRunning = false;
+      _cameraState = null;
+    });
   }
 
   void _startCamera() {
@@ -245,7 +245,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
 
   Widget buildMiddleContentWrapper(CameraState state) {
     if (!cameraUi.showControlPanel) {
-      return const Column(children: [Spacer()]);
+      return const SizedBox.shrink();
     }
     return buildMiddleContent(state);
   }
@@ -368,17 +368,44 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
     );
   }
 
+  void _syncCameraState(CameraState state) {
+    state.when(
+      onPhotoMode: onCameraReady,
+      onVideoMode: onCameraReady,
+      onVideoRecordingMode: onCameraReady,
+    );
+    if (!identical(_cameraState, state)) {
+      _cameraState = state;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() {});
+      });
+    }
+  }
+
+  Widget _buildFixedBottomControls() {
+    final CameraState? state = _cameraState;
+    if (state == null || !_cameraRunning) {
+      return const SizedBox.shrink();
+    }
+
+    return SafeArea(
+      top: false,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          buildMiddleContentWrapper(state),
+          buildBottomBar(state),
+        ],
+      ),
+    );
+  }
+
   Widget _buildPreviewDecorator(CameraState state, AnalysisPreview preview) {
     _latestPreviewScale = preview.scale;
 
     return Stack(
       fit: StackFit.expand,
       children: [
-        // if (_hasViewportMask)
-        //   CameraPreviewViewportOverlay(
-        //     widthOverHeight: targetPreviewWidthOverHeight!,
-        //     alignment: previewAlignment,
-        //   ),
         BoundedPinchZoomOverlay(
           range: cameraUi.zoomRange,
           displayZoom: cameraUi.displayZoom,
@@ -414,15 +441,13 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
         onPreviewTapBuilder: _buildPreviewTap,
         onMediaCaptureEvent: (event) => handleCaptureEvent(context, event),
         topActionsBuilder: (state) {
-          state.when(
-            onPhotoMode: onCameraReady,
-            onVideoMode: onCameraReady,
-            onVideoRecordingMode: onCameraReady,
-          );
+          _syncCameraState(state);
           return const SizedBox.shrink();
         },
-        middleContentBuilder: buildMiddleContentWrapper,
-        bottomActionsBuilder: buildBottomBar,
+        // Passthrough overlay so preview taps are not blocked by [AwesomeCameraLayout].
+        middleContentBuilder: (_) =>
+            const IgnorePointer(child: SizedBox.expand()),
+        bottomActionsBuilder: (_) => const SizedBox.shrink(),
       ),
     );
   }
@@ -449,14 +474,14 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
         else
           const ColoredBox(color: AppColors.black),
         if (buildOverlay() != null) buildOverlay()!,
-        if (heightMask > 0) ...[
+        if (isPhotoMode && heightMask > 0) ...[
           Positioned(
             top: 0,
             left: 0,
             right: 0,
             height: heightMask,
             child: const IgnorePointer(
-              child: ColoredBox(color: Colors.lightGreenAccent),
+              child: ColoredBox(color: Colors.black),
             ),
           ),
           Positioned(
@@ -465,7 +490,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
             right: 0,
             height: heightMask,
             child: const IgnorePointer(
-              child: ColoredBox(color: Colors.lightGreenAccent),
+              child: ColoredBox(color: Colors.black),
             ),
           ),
         ],
@@ -479,17 +504,29 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
       backgroundColor: AppColors.black,
       body: SafeArea(
         bottom: false,
-        child: Column(
+        child: Stack(
+          fit: StackFit.expand,
           children: [
-            buildTopBar(),
-            Expanded(
-              child: _checkingPermissions || !_permissionsReady
-                  ? _buildPermissionGate()
-                  : LayoutBuilder(
-                      builder: (context, constraints) =>
-                          _buildCameraArea(constraints),
-                    ),
+            Column(
+              children: [
+                buildTopBar(),
+                Expanded(
+                  child: _checkingPermissions || !_permissionsReady
+                      ? _buildPermissionGate()
+                      : LayoutBuilder(
+                          builder: (context, constraints) =>
+                              _buildCameraArea(constraints),
+                        ),
+                ),
+              ],
             ),
+            if (_permissionsReady && !_checkingPermissions)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: _buildFixedBottomControls(),
+              ),
           ],
         ),
       ),

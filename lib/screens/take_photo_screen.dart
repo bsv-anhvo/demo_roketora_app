@@ -150,8 +150,8 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
     final CameraUiState ui = cameraUi;
 
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        const Spacer(),
         if (ui.showFilterStrip) ...[
           buildFilterStrip(state),
           const Gap(8),
