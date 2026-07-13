@@ -26,6 +26,41 @@ class PhotoFilterHelper {
     );
   }
 
+  /// Center-crops to the target portrait width/height ratio.
+  static Future<void> centerCropToPortraitRatio(
+    String filePath,
+    double portraitWidthOverHeight,
+  ) async {
+    final img.Image image = await _decodeOrientedImage(filePath);
+    final double currentRatio = image.width / image.height;
+    if ((currentRatio - portraitWidthOverHeight).abs() < 0.01) {
+      return;
+    }
+
+    final int cropWidth;
+    final int cropHeight;
+    if (currentRatio > portraitWidthOverHeight) {
+      cropHeight = image.height;
+      cropWidth = (cropHeight * portraitWidthOverHeight).round();
+    } else {
+      cropWidth = image.width;
+      cropHeight = (cropWidth / portraitWidthOverHeight).round();
+    }
+
+    final img.Image cropped = img.copyCrop(
+      image,
+      x: (image.width - cropWidth) ~/ 2,
+      y: (image.height - cropHeight) ~/ 2,
+      width: cropWidth,
+      height: cropHeight,
+    );
+
+    await File(filePath).writeAsBytes(
+      img.encodeJpg(cropped, quality: 88),
+      flush: true,
+    );
+  }
+
   static Future<void> applyToFile(String filePath, AwesomeFilter filter) async {
     if (filter.id == AwesomeFilter.None.id) return;
 

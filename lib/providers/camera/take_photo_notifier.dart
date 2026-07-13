@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:camerawesome/camerawesome_plugin.dart';
+import 'package:demo_roketota_app/core/extensions/camera_aspect_ratio_extension.dart';
 import 'package:demo_roketota_app/core/models/camera_settings.dart';
 import 'package:demo_roketota_app/services/media_capture_metadata_service.dart';
 import 'package:demo_roketota_app/utils/media_file_helper.dart';
@@ -99,12 +100,19 @@ class TakePhotoNotifier extends AutoDisposeNotifier<TakePhotoState>
 
       final DateTime capturedAt = DateTime.now();
 
-      await File(paths.originalPath).copy(paths.filterPath);
+      await PhotoFilterHelper.normalizeOrientation(paths.originalPath);
 
-      await Future.wait<void>(<Future<void>>[
-        PhotoFilterHelper.normalizeOrientation(paths.originalPath),
-        PhotoFilterHelper.applyToFile(paths.filterPath, activeFilter),
-      ]);
+      final CameraAspectRatios aspectRatio =
+          state.selectedPhotoAspectRatio.aspectRatio;
+      if (aspectRatio.needsSoftwareCrop) {
+        await PhotoFilterHelper.centerCropToPortraitRatio(
+          paths.originalPath,
+          aspectRatio.portraitWidthOverHeight,
+        );
+      }
+
+      await File(paths.originalPath).copy(paths.filterPath);
+      await PhotoFilterHelper.applyToFile(paths.filterPath, activeFilter);
 
       await MediaCaptureMetadataService.instance.registerPhotoCapture(
         capturedAt: capturedAt,

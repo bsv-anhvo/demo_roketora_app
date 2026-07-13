@@ -435,44 +435,40 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
       (constraints.maxHeight - heightPreview) / 2,
     );
 
-    return Column(
+    return Stack(
+      fit: StackFit.expand,
       children: [
-        if (heightMask > 0)
-          Container(
-            width: double.infinity,
+        if (_cameraRunning)
+          KeyedSubtree(
+            key: ValueKey('${cameraWidgetKey}_$_cameraSession'),
+            child: _buildCameraAwesome(
+              width: widthScreen,
+              height: constraints.maxHeight,
+            ),
+          )
+        else
+          const ColoredBox(color: AppColors.black),
+        if (buildOverlay() != null) buildOverlay()!,
+        if (heightMask > 0) ...[
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
             height: heightMask,
-            color: Colors.lightGreenAccent,
-          ),
-        // Clip the preview so ratios the sensor can't produce natively
-        // (e.g. 1:1 on Android, where the stream stays 4:3) are cropped to a
-        // centered viewport instead of overflowing onto the letterbox masks.
-        SizedBox(
-          width: widthScreen,
-          height: heightPreview,
-          child: ClipRect(
-            child: Stack(
-              children: [
-                if (_cameraRunning)
-                  KeyedSubtree(
-                    key: ValueKey('${cameraWidgetKey}_$_cameraSession'),
-                    child: _buildCameraAwesome(
-                      width: widthScreen,
-                      height: heightPreview,
-                    ),
-                  )
-                else
-                  const ColoredBox(color: AppColors.black),
-                if (buildOverlay() != null) buildOverlay()!,
-              ],
+            child: const IgnorePointer(
+              child: ColoredBox(color: Colors.lightGreenAccent),
             ),
           ),
-        ),
-        if (heightMask > 0)
-          Container(
-            width: double.infinity,
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
             height: heightMask,
-            color: Colors.lightGreenAccent,
+            child: const IgnorePointer(
+              child: ColoredBox(color: Colors.lightGreenAccent),
+            ),
           ),
+        ],
       ],
     );
   }
