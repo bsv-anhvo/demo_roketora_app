@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:camerawesome/camerawesome_plugin.dart';
@@ -77,6 +78,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
   double _topBarHeight = 56;
 
   void _measureTopBarHeight() {
+    if (!mounted) return;
     final RenderBox? box =
         _topBarKey.currentContext?.findRenderObject() as RenderBox?;
     if (box == null || !box.hasSize) return;
@@ -466,6 +468,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
   }
 
   Widget _buildCameraArea(BoxConstraints constraints) {
+    final double statusBarHeight = MediaQuery.of(context).padding.top;
     final double widthScreen = constraints.maxWidth;
     final double heightPreview = widthScreen * initialAspectRatio.value;
     final double heightMask = math.max(
@@ -473,6 +476,12 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
       (constraints.maxHeight - heightPreview) / 2,
     );
     final Widget? overlay = buildOverlay(topBarHeight: _topBarHeight);
+
+    // Only apply status-bar compensation when both masks stay non-negative.
+    final double statusBarHalf = statusBarHeight / 2;
+    final double statusBarOffset = math.min(heightMask, statusBarHalf);
+    final double topMaskHeight = heightMask + (Platform.isIOS ? statusBarOffset : 0);
+    final double bottomMaskHeight = heightMask - (Platform.isIOS ? statusBarOffset : 0);
 
     return Stack(
       fit: StackFit.expand,
@@ -489,8 +498,8 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
           const ColoredBox(color: AppColors.black),
         ?overlay,
         if (isPhotoMode && heightMask > 0) ...[
-          MaskBar(top: 0, height: heightMask),
-          MaskBar(bottom: 0, height: heightMask),
+          MaskBar(top: 0, height: topMaskHeight),
+          MaskBar(bottom: 0, height: bottomMaskHeight),
         ],
       ],
     );
