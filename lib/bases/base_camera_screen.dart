@@ -254,10 +254,15 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
   Widget? buildOverlay({double topBarHeight = 0}) => null;
 
   Widget buildTopBar() {
-    return AppTopBar(
-      title: screenTitle,
-      leading: _buildIconBackWidget(),
-      trailing: _buildIconSettingWidget(),
+    final double statusBarHeight = MediaQuery.of(context).padding.top;
+
+    return Padding(
+      padding: EdgeInsets.only(top: statusBarHeight),
+      child: AppTopBar(
+        title: screenTitle,
+        leading: _buildIconBackWidget(),
+        trailing: _buildIconSettingWidget(),
+      ),
     );
   }
 
@@ -468,7 +473,6 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
   }
 
   Widget _buildCameraArea(BoxConstraints constraints) {
-    final double statusBarHeight = MediaQuery.of(context).padding.top;
     final double widthScreen = constraints.maxWidth;
     final double heightPreview = widthScreen * initialAspectRatio.value;
     final double heightMask = math.max(
@@ -476,12 +480,6 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
       (constraints.maxHeight - heightPreview) / 2,
     );
     final Widget? overlay = buildOverlay(topBarHeight: _topBarHeight);
-
-    // Only apply status-bar compensation when both masks stay non-negative.
-    final double statusBarHalf = statusBarHeight / 2;
-    final double statusBarOffset = math.min(heightMask, statusBarHalf);
-    final double topMaskHeight = heightMask + (Platform.isIOS ? statusBarOffset : 0);
-    final double bottomMaskHeight = heightMask - (Platform.isIOS ? statusBarOffset : 0);
 
     return Stack(
       fit: StackFit.expand,
@@ -498,8 +496,8 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
           const ColoredBox(color: AppColors.black),
         ?overlay,
         if (isPhotoMode && heightMask > 0) ...[
-          MaskBar(top: 0, height: topMaskHeight),
-          MaskBar(bottom: 0, height: bottomMaskHeight),
+          MaskBar(top: 0, height: heightMask),
+          MaskBar(bottom: 0, height: heightMask),
         ],
       ],
     );
@@ -511,35 +509,32 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
 
     return Scaffold(
       backgroundColor: AppColors.black,
-      body: SafeArea(
-        bottom: false,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            LayoutBuilder(
-              builder: (context, constraints) =>
-                  _checkingPermissions || !_permissionsReady
-                      ? _buildPermissionGate()
-                      : _buildCameraArea(constraints),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          LayoutBuilder(
+            builder: (context, constraints) =>
+            _checkingPermissions || !_permissionsReady
+                ? _buildPermissionGate()
+                : _buildCameraArea(constraints),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            child: KeyedSubtree(
+              key: _topBarKey,
+              child: buildTopBar(),
             ),
+          ),
+          if (_permissionsReady && !_checkingPermissions)
             Positioned(
               left: 0,
               right: 0,
-              top: 0,
-              child: KeyedSubtree(
-                key: _topBarKey,
-                child: buildTopBar(),
-              ),
+              bottom: 0,
+              child: _buildFixedBottomControls(),
             ),
-            if (_permissionsReady && !_checkingPermissions)
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: _buildFixedBottomControls(),
-              ),
-          ],
-        ),
+        ],
       ),
     );
   }
