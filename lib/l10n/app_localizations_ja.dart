@@ -120,6 +120,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get msgProcessingVideo => '動画を処理中...';
 
   @override
+  String get msgProcessingPhoto => '写真を処理中...';
+
+  @override
   String get msgDeleting => '削除中...';
 
   @override

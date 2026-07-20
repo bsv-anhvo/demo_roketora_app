@@ -6,6 +6,7 @@ import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:demo_roketota_app/core/extensions/context_extension.dart';
 import 'package:demo_roketota_app/core/extensions/snack_bar_extension.dart';
 import 'package:demo_roketota_app/core/models/camera_settings.dart';
+import 'package:demo_roketota_app/core/models/photo_post_process_input.dart';
 import 'package:demo_roketota_app/providers/camera/camera_ui_actions_mixin.dart';
 import 'package:demo_roketota_app/providers/camera/camera_ui_state.dart';
 import 'package:demo_roketota_app/screens/photo_preview_screen.dart';
@@ -205,6 +206,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
     required String filePath,
     required String originalFilePath,
     required bool isVideo,
+    PhotoPostProcessInput? photoPostProcess,
   }) async {
     if (cameraUi.isOpeningPreview || !mounted) return;
     _stopCamera();
@@ -224,6 +226,7 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
           : PhotoPreviewScreen(
               filePath: filePath,
               originalFilePath: originalFilePath,
+              postProcessInput: photoPostProcess,
             ),
     );
 

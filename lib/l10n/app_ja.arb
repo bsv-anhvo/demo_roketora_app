@@ -36,6 +36,7 @@
   "msgLocationPermissionOrGPSIsNotReady": "位置情報の許可またはGPSの準備ができていません。タップして再確認してください。",
   "msgCapturing": "撮影中...",
   "msgProcessingVideo": "動画を処理中...",
+  "msgProcessingPhoto": "写真を処理中...",
   "msgDeleting": "削除中...",
   "msgSaving": "保存中...",
   "msgGPSIsTurnedOff": "このアプリを使用するには位置情報サービスをオンにしてください。",

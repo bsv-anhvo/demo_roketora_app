@@ -42,6 +42,7 @@
   "msgLocationPermissionOrGPSIsNotReady": "Location permission or GPS is not ready. Tap to check again.",
   "msgCapturing": "Capturing...",
   "msgProcessingVideo": "Processing video...",
+  "msgProcessingPhoto": "Processing photo...",
   "msgDeleting": "Deleting...",
   "msgSaving": "Saving...",
   "msgGPSIsTurnedOff": "Turn on location services to use this app.",

@@ -121,6 +121,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get msgProcessingVideo => 'Processing video...';
 
   @override
+  String get msgProcessingPhoto => 'Processing photo...';
+
+  @override
   String get msgDeleting => 'Deleting...';
 
   @override

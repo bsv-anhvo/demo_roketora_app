@@ -3,6 +3,7 @@ import 'package:demo_roketota_app/bases/base_camera_screen.dart';
 import 'package:demo_roketota_app/core/extensions/camera_aspect_ratio_extension.dart';
 import 'package:demo_roketota_app/core/extensions/snack_bar_extension.dart';
 import 'package:demo_roketota_app/core/models/camera_settings.dart';
+import 'package:demo_roketota_app/core/models/photo_post_process_input.dart';
 import 'package:demo_roketota_app/providers/camera/camera_ui_actions_mixin.dart';
 import 'package:demo_roketota_app/providers/camera/camera_ui_state.dart';
 import 'package:demo_roketota_app/providers/camera/take_photo_notifier.dart';
@@ -89,8 +90,8 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
   Future<void> _capturePhoto(PhotoCameraState photoState) async {
     _setProcessingMessage(Strings.msgCapturing);
     try {
-      final ({String filterPath, String originalPath})? result =
-      await _notifier.captureDualPhoto(photoState);
+      final PhotoPostProcessInput? result =
+      await _notifier.captureDualPhoto2(photoState);
       if (!mounted) return;
       _setProcessingMessage(null);
       if (result != null) {
@@ -98,6 +99,7 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
           filePath: result.filterPath,
           originalFilePath: result.originalPath,
           isVideo: false,
+          photoPostProcess: result,
         );
       }
     } catch (e) {

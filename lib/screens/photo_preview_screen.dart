@@ -5,7 +5,9 @@ import 'package:demo_roketota_app/core/extensions/context_extension.dart';
 import 'package:demo_roketota_app/core/extensions/snack_bar_extension.dart';
 import 'package:demo_roketota_app/utils/app_colors.dart';
 import 'package:demo_roketota_app/utils/media_file_helper.dart';
+import 'package:demo_roketota_app/core/models/photo_post_process_input.dart';
 import 'package:demo_roketota_app/utils/photo_image_editor_config.dart';
+import 'package:demo_roketota_app/utils/photo_post_process_helper.dart';
 import 'package:demo_roketota_app/utils/strings.dart';
 import 'package:demo_roketota_app/widgets/common/app_icon_button.dart';
 import 'package:google_mlkit_selfie_segmentation/google_mlkit_selfie_segmentation.dart';
@@ -21,18 +23,24 @@ class PhotoPreviewScreen extends StatefulWidget {
     super.key,
     required this.filePath,
     this.originalFilePath,
+    this.postProcessInput,
   });
 
   final String filePath;
   final String? originalFilePath;
+  final PhotoPostProcessInput? postProcessInput;
 
   @override
   State<PhotoPreviewScreen> createState() => _PhotoPreviewScreenState();
 }
 
 class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
+  static const Duration _postProcessStartDelay = Duration(milliseconds: 300);
+
   bool _isDeleting = false;
   bool _isSaving = false;
+  bool _isPostProcessing = false;
+  bool _postProcessPending = false;
   bool _showOriginal = false;
   String? pathPhotoSave;
   String? _errorMessage;
@@ -59,7 +67,7 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
   }
 
   Future<void> _onSave() async {
-    if (_isSaving || _isDeleting) return;
+    if (_isSaving || _isDeleting || _postProcessPending) return;
     setState(() => _isSaving = true);
 
     if (_editedFilePath != null) {
@@ -99,7 +107,7 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
   }
 
   void _enterEditMode() {
-    if (_isDeleting || _isEditing) return;
+    if (_isDeleting || _isEditing || _postProcessPending) return;
     setState(() {
       _isEditing = true;
       _editorSourcePath = _currentPreviewPath();
@@ -171,8 +179,40 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
   @override
   void initState() {
     super.initState();
-    // Pending portrait photo feature
-    // runTask();
+    if (widget.postProcessInput != null) {
+      _postProcessPending = true;
+      Future<void>.delayed(_postProcessStartDelay, () {
+        if (!mounted || !_postProcessPending) return;
+        _startPostProcess();
+      });
+    }
+  }
+
+  void _startPostProcess() {
+    if (!mounted || !_postProcessPending || widget.postProcessInput == null) {
+      return;
+    }
+    setState(() => _isPostProcessing = true);
+    _runPostProcess();
+  }
+
+  Future<void> _runPostProcess() async {
+    final PhotoPostProcessInput input = widget.postProcessInput!;
+    try {
+      await PhotoPostProcessHelper.processAfterCapture(input);
+      if (!mounted) return;
+      setState(() {
+        _isPostProcessing = false;
+        _postProcessPending = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isPostProcessing = false;
+        _postProcessPending = false;
+        _errorMessage = Strings.msgCaptureFailed('$e');
+      });
+    }
   }
 
   void runTask() async {
@@ -273,7 +313,7 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
   }
 
   Future<void> _onDelete() async {
-    if (_isDeleting || _isSaving) return;
+    if (_isDeleting || _isSaving || _postProcessPending) return;
     setState(() => _isDeleting = true);
 
     await MediaFileHelper.deletePhotoStampPair(
@@ -290,7 +330,7 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
   }
 
   Future<void> _onClosePressed() async {
-    if (_isDeleting || _isSaving) return;
+    if (_isDeleting || _isSaving || _postProcessPending) return;
     if (_isEditing) {
       _handleEditBackPress();
       return;
@@ -351,6 +391,8 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
             AppLoadingOverlay(message: Strings.msgDeleting),
           if (_isSaving)
             AppLoadingOverlay(message: Strings.msgSaving),
+          if (_isPostProcessing)
+            AppLoadingOverlay(message: Strings.msgProcessingPhoto),
           ],
         ),
       ),
@@ -365,7 +407,8 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
         title: _isEditing ? Strings.labelEditPhoto : Strings.labelPhotoPreview,
         sideSlotWidth: _isEditing ? 48 : 88,
         leading: AppIconButton(
-          onPressed: _isDeleting || _isSaving ? null : _onClosePressed,
+          onPressed:
+              _isDeleting || _isSaving || _postProcessPending ? null : _onClosePressed,
           icon: const Icon(Icons.close_rounded),
         ),
         trailing: _isEditing
@@ -374,7 +417,9 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             AppIconButton(
-              onPressed: _isDeleting || _isSaving ? null : _enterEditMode,
+              onPressed: _isDeleting || _isSaving || _postProcessPending
+                  ? null
+                  : _enterEditMode,
               icon: const Icon(Icons.edit_outlined),
               tooltip: Strings.labelEditPhoto,
             ),
@@ -410,6 +455,10 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
       return _buildInlineImageEditor();
     }
 
+    if (_postProcessPending) {
+      return const SizedBox.shrink();
+    }
+
     final String displayPath = _currentPreviewPath();
 
     return InteractiveViewer(
@@ -434,7 +483,9 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
           children: [
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: _isDeleting || _isSaving ? null : _onDelete,
+                onPressed: _isDeleting || _isSaving || _postProcessPending
+                    ? null
+                    : _onDelete,
                 icon: const Icon(Icons.delete_outline_rounded),
                 label: Text(Strings.labelActionDelete),
                 style: OutlinedButton.styleFrom(
@@ -447,7 +498,9 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
             const Gap(16),
             Expanded(
               child: FilledButton.icon(
-                onPressed: _isDeleting || _isSaving ? null : _onSave,
+                onPressed: _isDeleting || _isSaving || _postProcessPending
+                    ? null
+                    : _onSave,
                 icon: const Icon(Icons.check_rounded),
                 label: Text(Strings.labelActionSave),
                 style: FilledButton.styleFrom(

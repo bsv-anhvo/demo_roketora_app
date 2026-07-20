@@ -51,6 +51,7 @@ class Strings {
   static String get msgLocationPermissionOrGPSIsNotReady => _l.msgLocationPermissionOrGPSIsNotReady;
   static String get msgCapturing => _l.msgCapturing;
   static String get msgProcessingVideo => _l.msgProcessingVideo;
+  static String get msgProcessingPhoto => _l.msgProcessingPhoto;
   static String get msgDeleting => _l.msgDeleting;
   static String get msgSaving => _l.msgSaving;
   static String get msgGPSIsTurnedOff => _l.msgGPSIsTurnedOff;

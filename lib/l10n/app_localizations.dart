@@ -314,6 +314,12 @@ abstract class AppLocalizations {
   /// **'Processing video...'**
   String get msgProcessingVideo;
 
+  /// No description provided for @msgProcessingPhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing photo...'**
+  String get msgProcessingPhoto;
+
   /// No description provided for @msgDeleting.
   ///
   /// In en, this message translates to:

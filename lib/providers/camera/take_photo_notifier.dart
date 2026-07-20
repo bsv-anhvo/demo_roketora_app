@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:demo_roketota_app/core/extensions/camera_aspect_ratio_extension.dart';
 import 'package:demo_roketota_app/core/models/camera_settings.dart';
+import 'package:demo_roketota_app/core/models/photo_post_process_input.dart';
 import 'package:demo_roketota_app/services/media_capture_metadata_service.dart';
 import 'package:demo_roketota_app/utils/media_file_helper.dart';
 import 'package:demo_roketota_app/utils/photo_filter_helper.dart';
@@ -123,6 +124,49 @@ class TakePhotoNotifier extends AutoDisposeNotifier<TakePhotoState>
       return (
       filterPath: paths.filterPath,
       originalPath: paths.originalPath,
+      );
+    } finally {
+      await photoState.setFilter(activeFilter);
+      setCapturing(false);
+    }
+  }
+
+  Future<PhotoPostProcessInput?> captureDualPhoto2(
+    PhotoCameraState photoState,
+  ) async {
+    setCapturing(true);
+    final AwesomeFilter activeFilter = photoState.filter;
+    try {
+      await photoState.setFilter(AwesomeFilter.None);
+
+      final CaptureRequest captureRequest = await photoState.takePhoto();
+      if (photoState.captureState?.status != MediaCaptureStatus.success) {
+        return null;
+      }
+
+      final String? capturedPath = captureRequest.when(
+        single: (single) => single.file?.path,
+        multiple: (multiple) {
+          for (final file in multiple.fileBySensor.values) {
+            if (file != null) return file.path;
+          }
+          return null;
+        },
+      );
+      if (capturedPath == null) return null;
+
+      final String originalPath = capturedPath;
+      final String filterPath = capturedPath.replaceFirst(
+        'photo_original_',
+        'photo_',
+      );
+
+      return PhotoPostProcessInput(
+        originalPath: originalPath,
+        filterPath: filterPath,
+        capturedAt: DateTime.now(),
+        activeFilter: activeFilter,
+        aspectRatio: state.selectedPhotoAspectRatio.aspectRatio,
       );
     } finally {
       await photoState.setFilter(activeFilter);
