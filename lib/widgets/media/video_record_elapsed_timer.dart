@@ -13,8 +13,10 @@ class VideoRecordElapsedTimer extends StatelessWidget {
   final Duration maxDuration;
 
   String _format(Duration duration) {
-    final int seconds = duration.inSeconds.clamp(0, maxDuration.inSeconds);
-    return '0:${seconds.toString().padLeft(2, '0')}';
+    final int totalSeconds = duration.inSeconds.clamp(0, maxDuration.inSeconds);
+    final int minutes = totalSeconds ~/ 60;
+    final int seconds = totalSeconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 
   @override

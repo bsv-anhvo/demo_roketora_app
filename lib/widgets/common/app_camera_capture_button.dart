@@ -182,9 +182,9 @@ class _AppCameraCaptureButtonState extends State<AppCameraCaptureButton>
     widget.onHoldRecordingChanged?.call(true);
     _progressController
       ..duration = widget.isPhotoMode
-          ? Constants.quickRecordMaxDuration
+          ? Constants.videoRecordMaxDuration
           : (widget.recordMaxDuration ??
-          Constants.quickRecordMaxDuration)
+          Constants.videoRecordMaxDuration)
       ..forward(from: 0);
     widget.onQuickVideoStart!();
   }
@@ -219,11 +219,7 @@ class _AppCameraCaptureButtonState extends State<AppCameraCaptureButton>
       ..reset();
   }
 
-  void _autoStopVideoRecording() {
-    if (widget.isPhotoMode || widget.recordMaxDuration == null) return;
-
-    _resetRecordProgress();
-    HapticFeedback.mediumImpact();
+  void _stopVideoRecordingIfActive() {
     widget.state.when(
       onVideoRecordingMode: (recordingState) {
         widget.onVideoRecordStop?.call();
@@ -234,6 +230,14 @@ class _AppCameraCaptureButtonState extends State<AppCameraCaptureButton>
       onPreviewMode: (_) {},
       onAnalysisOnlyMode: (_) {},
     );
+  }
+
+  void _autoStopVideoRecording() {
+    if (widget.isPhotoMode || widget.recordMaxDuration == null) return;
+
+    _resetRecordProgress();
+    HapticFeedback.mediumImpact();
+    _stopVideoRecordingIfActive();
     if (mounted) setState(() {});
   }
 }

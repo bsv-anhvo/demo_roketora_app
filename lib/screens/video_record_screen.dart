@@ -158,6 +158,28 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
     // Post-record processing overlay is owned by [_openVideoPreview].
   }
 
+  void _stopRecordingIfActive() {
+    final CameraState? cameraState = _lastCameraState;
+    if (cameraState == null) return;
+
+    cameraState.when(
+      onVideoRecordingMode: (recordingState) {
+        _onVideoRecordStop();
+        recordingState.stopRecording();
+      },
+      onVideoMode: (_) {},
+      onPhotoMode: (_) {},
+      onPreviewMode: (_) {},
+      onAnalysisOnlyMode: (_) {},
+    );
+
+    if (!mounted) return;
+    setState(() => _isHoldRecording = false);
+    _recordPulseController
+      ..stop()
+      ..reset();
+  }
+
   void handleHoldRecordStart(CameraState state) {
     state.when(
       onVideoMode: (videoState) => _notifier.prepareAndStartRecording(videoState),
@@ -169,16 +191,7 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
   }
 
   void handleHoldRecordStop(CameraState state) {
-    state.when(
-      onVideoRecordingMode: (recordingState) {
-        _onVideoRecordStop();
-        recordingState.stopRecording();
-      },
-      onVideoMode: (_) {},
-      onPhotoMode: (_) {},
-      onPreviewMode: (_) {},
-      onAnalysisOnlyMode: (_) {},
-    );
+    _stopRecordingIfActive();
   }
 
   void _onHoldRecordingChanged(bool isHolding) {
@@ -291,7 +304,11 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
     switch ((event.status, event.isPicture, event.isVideo)) {
       case (MediaCaptureStatus.capturing, false, true):
         _handledVideoStampPath = null;
-        _notifier.startRecordTimer(isMounted: () => mounted);
+        _notifier.startRecordTimer(
+          isMounted: () => mounted,
+          maxDuration: Constants.videoRecordMaxDuration,
+          onMaxDurationReached: _stopRecordingIfActive,
+        );
         _syncRecordPulseAnimation();
       case (MediaCaptureStatus.success, false, true):
         final DateTime capturedAt =
@@ -376,8 +393,6 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
 
     if (!showRecordFx && processingMessage == null) return null;
 
-    final Duration maxDuration = Constants.videoRecordMaxDuration;
-
     return Stack(
       children: [
         if (showRecordFx)
@@ -408,7 +423,7 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
               padding: EdgeInsets.fromLTRB(24, 24 + topBarHeight, 24, 0),
               child: isRecording ? VideoRecordElapsedTimer(
                 elapsed: _videoState.recordElapsed,
-                maxDuration: maxDuration,
+                maxDuration: Constants.videoRecordMaxDuration,
               ) : _RecordingPreparingBadge(),
             ),
           ),

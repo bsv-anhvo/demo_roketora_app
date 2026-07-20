@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 class Constants {
   static const Duration quickRecordMaxDuration = Duration(seconds: 10);
-  static const Duration videoRecordMaxDuration = Duration(seconds: 20);
+  static const Duration videoRecordMaxDuration = Duration(minutes: 1);
   static const Duration focusIndicatorDuration = Duration(milliseconds: 2000);
 
   static const double defaultExposure = 0.5;

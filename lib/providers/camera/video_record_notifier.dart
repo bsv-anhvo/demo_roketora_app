@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:camerawesome/pigeon.dart';
@@ -6,7 +7,7 @@ import 'package:demo_roketota_app/core/models/camera_settings.dart';
 import 'package:demo_roketota_app/providers/camera/camera_ui_actions_mixin.dart';
 import 'package:demo_roketota_app/providers/camera/camera_ui_state.dart';
 import 'package:demo_roketota_app/providers/camera/video_record_state.dart';
-import 'package:demo_roketota_app/utils/constants.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final videoRecordProvider =
@@ -93,7 +94,11 @@ class VideoRecordNotifier extends AutoDisposeNotifier<VideoRecordState>
     _filterToRestore = null;
   }
 
-  void startRecordTimer({required bool Function() isMounted}) {
+  void startRecordTimer({
+    required bool Function() isMounted,
+    required Duration maxDuration,
+    VoidCallback? onMaxDurationReached,
+  }) {
     _recordTimer?.cancel();
     state = state.copyWith(
       isRecording: true,
@@ -109,11 +114,11 @@ class VideoRecordNotifier extends AutoDisposeNotifier<VideoRecordState>
 
       final Duration next =
           state.recordElapsed + const Duration(milliseconds: 100);
-      if (next >= Constants.videoRecordMaxDuration) {
-        state = state.copyWith(
-          recordElapsed: Constants.videoRecordMaxDuration,
-        );
+      if (next >= maxDuration) {
+        state = state.copyWith(recordElapsed: maxDuration);
         timer.cancel();
+        _recordTimer = null;
+        onMaxDurationReached?.call();
         return;
       }
 
