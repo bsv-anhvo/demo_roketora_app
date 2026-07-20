@@ -4,6 +4,7 @@ import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:camerawesome/pigeon.dart';
 import 'package:demo_roketota_app/bases/base_camera_screen.dart';
 import 'package:demo_roketota_app/core/extensions/camera_aspect_ratio_extension.dart';
+import 'package:demo_roketota_app/core/extensions/logger_extension.dart';
 import 'package:demo_roketota_app/core/extensions/snack_bar_extension.dart';
 import 'package:demo_roketota_app/core/models/camera_settings.dart';
 import 'package:demo_roketota_app/providers/camera/camera_ui_actions_mixin.dart';
@@ -14,6 +15,7 @@ import 'package:demo_roketota_app/services/media_capture_metadata_service.dart';
 import 'package:demo_roketota_app/utils/constants.dart';
 import 'package:demo_roketota_app/utils/media_file_helper.dart';
 import 'package:demo_roketota_app/utils/strings.dart';
+import 'package:demo_roketota_app/utils/video_quality_resolver.dart';
 import 'package:demo_roketota_app/widgets/common/app_camera_capture_button.dart';
 import 'package:demo_roketota_app/widgets/common/app_loading_overlay.dart';
 import 'package:demo_roketota_app/widgets/camera/camera_control_panel.dart';
@@ -108,12 +110,24 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
   }
 
   Future<void> pickVideoQuality() async {
+    final VideoQualityRange supportedRange =
+        await VideoQualityResolver.getSupportedRange();
+
+    'supportedRange: min = ${supportedRange.min} - max = ${supportedRange.max}'.log();
+
+    final List<VideoRecordingQuality> availableQualities =
+        supportedRange.filterOptions(kVideoQualities);
+
+    if (!mounted || availableQualities.isEmpty) return;
+
     final VideoRecordingQuality? picked = await showCameraPickerSheet(
       context: context,
       title: Strings.labelVideoResolution,
-      options: kVideoQualities,
+      options: availableQualities,
       labelBuilder: (option) => option.label,
-      selected: _videoState.videoQuality,
+      selected: availableQualities.contains(_videoState.videoQuality)
+          ? _videoState.videoQuality
+          : availableQualities.first,
     );
 
     if (picked != null && picked != _videoState.videoQuality) {

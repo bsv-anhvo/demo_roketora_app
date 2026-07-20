@@ -11,7 +11,7 @@ class VideoRecordState {
     this.recordElapsed = Duration.zero,
     this.isRecording = false,
     this.recordingCapturedAt,
-  })  : videoQuality = videoQuality ?? VideoRecordingQuality.fhd,
+  })  : videoQuality = videoQuality ?? VideoRecordingQuality.hd,
         videoFps = videoFps ?? kVideoFpsOptions[1],
         videoBitrate = videoBitrate ?? kVideoBitrateOptions[1];
 
