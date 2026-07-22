@@ -70,7 +70,7 @@ class MainActivity : FlutterActivity() {
         }
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            CamcorderProfile.hasProfile(cameraId, quality)
+            CamcorderProfile.getAll(cameraId, quality) != null
         } else {
             false
         }
