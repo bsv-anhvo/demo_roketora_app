@@ -15,6 +15,7 @@ import 'package:demo_roketota_app/services/media_capture_metadata_service.dart';
 import 'package:demo_roketota_app/utils/constants.dart';
 import 'package:demo_roketota_app/utils/media_file_helper.dart';
 import 'package:demo_roketota_app/utils/strings.dart';
+import 'package:demo_roketota_app/utils/video_fps_resolver.dart';
 import 'package:demo_roketota_app/utils/video_quality_resolver.dart';
 import 'package:demo_roketota_app/widgets/common/app_camera_capture_button.dart';
 import 'package:demo_roketota_app/widgets/common/app_loading_overlay.dart';
@@ -136,12 +137,26 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
   }
 
   Future<void> pickVideoFps() async {
+    final int maxSupportedFps = await VideoFpsResolver.getMaxSupportedFps();
+    final List<VideoFpsOption> availableFps = VideoFpsResolver.filterOptions(
+      kVideoFpsOptions,
+      maxSupportedFps,
+    );
+
+    'maxSupportedFps: $maxSupportedFps, availableFps: '
+            '${availableFps.map((o) => o.fps).join(', ')}'
+        .log();
+
+    if (!mounted || availableFps.isEmpty) return;
+
     final VideoFpsOption? picked = await showCameraPickerSheet(
       context: context,
       title: Strings.labelFrameRate,
-      options: kVideoFpsOptions,
+      options: availableFps,
       labelBuilder: (option) => option.label,
-      selected: _videoState.videoFps,
+      selected: availableFps.any((o) => o.fps == _videoState.videoFps.fps)
+          ? _videoState.videoFps
+          : availableFps.first,
     );
 
     if (picked != null && picked.fps != _videoState.videoFps.fps) {
