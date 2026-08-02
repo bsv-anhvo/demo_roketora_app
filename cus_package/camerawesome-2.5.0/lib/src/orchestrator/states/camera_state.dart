@@ -155,6 +155,15 @@ abstract class CameraState {
     return cameraContext.setFilter(newFilter);
   }
 
+  /// Pixel brightness overlay for preview (adj in [-1, 1], 0 = unchanged).
+  void setPixelBrightness(double adj) {
+    cameraContext.setPixelBrightness(adj);
+  }
+
+  Stream<double> get pixelBrightness$ => cameraContext.pixelBrightness$;
+
+  double get pixelBrightness => cameraContext.pixelBrightness;
+
   /// The sensor config allows you to
   /// - set the [FlashMode]
   /// - set the zoom level

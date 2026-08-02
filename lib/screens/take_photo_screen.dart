@@ -166,6 +166,7 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
             timer: photo.timer,
             showFilterStrip: ui.showFilterStrip,
             showExposureSlider: ui.showExposureSlider,
+            showBrightnessSlider: ui.showBrightnessSlider,
             resolutionLabel: photo.selectedPhotoAspectRatio.label,
             onFlashTap: () {
               _notifier.setFlash(ui.flash.next);
@@ -173,6 +174,7 @@ class _TakePhotoScreenState extends CameraScreenBaseState<TakePhotoScreen> {
             },
             onToggleFilter: _notifier.toggleFilterStrip,
             onExposureTap: _notifier.toggleExposureSlider,
+            onBrightnessTap: _notifier.toggleBrightnessSlider,
             onTimerTap: () => _notifier.setTimer(photo.timer.next),
             onResolutionTap: () => pickPhotoAspectRatio(state),
           ),

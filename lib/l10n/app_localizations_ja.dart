@@ -57,6 +57,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get labelExposure => '露出';
 
   @override
+  String get labelBrightness => '明るさ';
+
+  @override
   String get labelFilter => 'フィルター';
 
   @override

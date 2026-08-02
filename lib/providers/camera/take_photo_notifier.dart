@@ -8,6 +8,7 @@ import 'package:demo_roketota_app/core/models/photo_post_process_input.dart';
 import 'package:demo_roketota_app/services/media_capture_metadata_service.dart';
 import 'package:demo_roketota_app/utils/media_file_helper.dart';
 import 'package:demo_roketota_app/utils/photo_filter_helper.dart';
+import 'package:demo_roketota_app/utils/camera_helper.dart';
 import 'package:demo_roketota_app/providers/camera/camera_ui_actions_mixin.dart';
 import 'package:demo_roketota_app/providers/camera/camera_ui_state.dart';
 import 'package:demo_roketota_app/providers/camera/take_photo_state.dart';
@@ -114,6 +115,10 @@ class TakePhotoNotifier extends AutoDisposeNotifier<TakePhotoState>
 
       await File(paths.originalPath).copy(paths.filterPath);
       await PhotoFilterHelper.applyToFile(paths.filterPath, activeFilter);
+      await PhotoFilterHelper.applyBrightnessToFile(
+        paths.filterPath,
+        CameraHelper.brightnessAdjFromNormalized(cameraUi.brightness),
+      );
 
       await MediaCaptureMetadataService.instance.registerPhotoCapture(
         capturedAt: capturedAt,
@@ -167,6 +172,7 @@ class TakePhotoNotifier extends AutoDisposeNotifier<TakePhotoState>
         capturedAt: DateTime.now(),
         activeFilter: activeFilter,
         aspectRatio: state.selectedPhotoAspectRatio.aspectRatio,
+        brightness: cameraUi.brightness,
       );
     } finally {
       await photoState.setFilter(activeFilter);

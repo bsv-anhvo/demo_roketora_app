@@ -5,6 +5,7 @@ import 'package:demo_roketota_app/core/extensions/camera_aspect_ratio_extension.
 import 'package:demo_roketota_app/core/models/photo_post_process_input.dart';
 import 'package:demo_roketota_app/services/media_capture_metadata_service.dart';
 import 'package:demo_roketota_app/utils/photo_filter_helper.dart';
+import 'package:demo_roketota_app/utils/camera_helper.dart';
 import 'package:flutter/foundation.dart';
 
 class PhotoPostProcessTask {
@@ -14,6 +15,7 @@ class PhotoPostProcessTask {
     required this.filterId,
     required this.needsSoftwareCrop,
     required this.portraitWidthOverHeight,
+    this.brightnessAdj = 0,
   });
 
   final String originalPath;
@@ -21,6 +23,7 @@ class PhotoPostProcessTask {
   final String filterId;
   final bool needsSoftwareCrop;
   final double portraitWidthOverHeight;
+  final double brightnessAdj;
 
   factory PhotoPostProcessTask.fromInput(PhotoPostProcessInput input) {
     return PhotoPostProcessTask(
@@ -29,6 +32,7 @@ class PhotoPostProcessTask {
       filterId: input.activeFilter.id,
       needsSoftwareCrop: input.aspectRatio.needsSoftwareCrop,
       portraitWidthOverHeight: input.aspectRatio.portraitWidthOverHeight,
+      brightnessAdj: CameraHelper.brightnessAdjFromNormalized(input.brightness),
     );
   }
 }
@@ -56,6 +60,10 @@ Future<void> photoPostProcessInBackground(PhotoPostProcessTask task) async {
   await PhotoFilterHelper.applyToFile(
     task.filterPath,
     _filterForId(task.filterId),
+  );
+  await PhotoFilterHelper.applyBrightnessToFile(
+    task.filterPath,
+    task.brightnessAdj,
   );
 }
 

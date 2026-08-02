@@ -17,6 +17,9 @@ class CameraContext {
 
   late final BehaviorSubject<AwesomeFilter> filterController;
 
+  /// Pixel brightness adj in [-1, 1] for Flutter ColorFiltered preview.
+  late final BehaviorSubject<double> pixelBrightnessController;
+
   late final BehaviorSubject<bool> filterSelectorOpened;
 
   /// on media capturing stream controller
@@ -46,6 +49,10 @@ class CameraContext {
   ExifPreferences exifPreferences;
 
   Stream<AwesomeFilter> get filter$ => filterController.stream;
+
+  Stream<double> get pixelBrightness$ => pixelBrightnessController.stream;
+
+  double get pixelBrightness => pixelBrightnessController.value;
 
   Stream<bool> get filterSelectorOpened$ => filterSelectorOpened.stream;
 
@@ -79,6 +86,11 @@ class CameraContext {
     stateController = BehaviorSubject.seeded(preparingState);
     filterSelectorOpened = BehaviorSubject.seeded(false);
     mediaCaptureController = BehaviorSubject.seeded(null);
+    pixelBrightnessController = BehaviorSubject.seeded(0);
+  }
+
+  void setPixelBrightness(double adj) {
+    pixelBrightnessController.add(adj.clamp(-1.0, 1.0));
   }
 
   CameraContext.create(
@@ -162,6 +174,7 @@ class CameraContext {
     sensorConfigController.close();
     mediaCaptureController.close();
     stateController.close();
+    pixelBrightnessController.close();
     analysisController?.stop();
     state.dispose();
     CamerawesomePlugin.stop();

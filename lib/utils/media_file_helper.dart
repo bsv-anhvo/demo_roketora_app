@@ -223,21 +223,25 @@ class MediaFileHelper {
     return '$dir/video_original_${result.group(1)}.mp4';
   }
 
-  /// Copies original stamp, then bakes [filter] into the edited stamp file.
+  /// Copies original stamp, then bakes [filter] / brightness into the edited stamp.
   static Future<String?> createEditedVideoStamp(
     String originalStampPath,
     AwesomeFilter filter, {
     int? fallbackFps,
+    double brightnessAdj = 0,
   }) async {
     final String? editedPath = editedPathForOriginal(originalStampPath);
     if (editedPath == null) return null;
 
     await File(originalStampPath).copy(editedPath);
-    if (filter.id != AwesomeFilter.None.id) {
+    final bool hasFilter = filter.id != AwesomeFilter.None.id;
+    final bool hasBrightness = brightnessAdj.abs() >= 1e-6;
+    if (hasFilter || hasBrightness) {
       await VideoFilterHelper.applyToFile(
         editedPath,
         filter,
         fallbackFps: fallbackFps,
+        brightnessAdj: brightnessAdj,
       );
     }
     return editedPath;

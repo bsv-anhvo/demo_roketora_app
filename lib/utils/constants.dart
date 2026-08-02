@@ -7,6 +7,8 @@ class Constants {
   static const Duration focusIndicatorDuration = Duration(milliseconds: 2000);
 
   static const double defaultExposure = 0.5;
+  /// Pixel brightness slider; 0.5 is neutral (no ColorFilter bias).
+  static const double defaultBrightness = 0.5;
   static const double defaultZoomLevel = 1.0;
 
   static const double buttonSize = 80;

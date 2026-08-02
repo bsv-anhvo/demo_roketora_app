@@ -11,8 +11,10 @@ abstract interface class CameraUiHost {
   FlashMode get flashMode;
   void toggleControlPanel();
   void toggleExposureSlider();
+  void toggleBrightnessSlider();
   Future<void> applyFlash(SensorConfig sensorConfig);
   Future<void> applyExposure(double value);
+  void applyBrightness(CameraState state, double value);
   Future<void> applyZoom(CameraState cameraState, double zoom);
   void setDisplayZoom(double zoom);
   void setOpeningPreview(bool value);
@@ -44,6 +46,7 @@ mixin CameraUiActions<S> on AutoDisposeNotifier<S> implements CameraUiHost {
     cameraUi = cameraUi.copyWith(
       showControlPanel: nextVisible,
       showExposureSlider: nextVisible ? cameraUi.showExposureSlider : false,
+      showBrightnessSlider: nextVisible ? cameraUi.showBrightnessSlider : false,
       showFilterStrip: nextVisible ? cameraUi.showFilterStrip : false,
     );
   }
@@ -54,8 +57,19 @@ mixin CameraUiActions<S> on AutoDisposeNotifier<S> implements CameraUiHost {
 
   @override
   void toggleExposureSlider() {
+    final bool next = !cameraUi.showExposureSlider;
     cameraUi = cameraUi.copyWith(
-      showExposureSlider: !cameraUi.showExposureSlider,
+      showExposureSlider: next,
+      showBrightnessSlider: next ? false : cameraUi.showBrightnessSlider,
+    );
+  }
+
+  @override
+  void toggleBrightnessSlider() {
+    final bool next = !cameraUi.showBrightnessSlider;
+    cameraUi = cameraUi.copyWith(
+      showBrightnessSlider: next,
+      showExposureSlider: next ? false : cameraUi.showExposureSlider,
     );
   }
 
@@ -67,11 +81,22 @@ mixin CameraUiActions<S> on AutoDisposeNotifier<S> implements CameraUiHost {
     cameraUi = cameraUi.copyWith(exposure: value);
   }
 
+  void setBrightness(double value) {
+    cameraUi = cameraUi.copyWith(brightness: value);
+  }
+
   @override
   Future<void> applyExposure(double value) async {
     final double clamped = value.clamp(0.0, 1.0);
     setExposure(clamped);
     await CameraHelper.applyExposureValue(clamped);
+  }
+
+  @override
+  void applyBrightness(CameraState state, double value) {
+    final double clamped = value.clamp(0.0, 1.0);
+    setBrightness(clamped);
+    CameraHelper.applyPixelBrightness(state, clamped);
   }
 
   @override
@@ -152,5 +177,6 @@ mixin CameraUiActions<S> on AutoDisposeNotifier<S> implements CameraUiHost {
     if (cameraUi.cameraReady) return;
     cameraUi = cameraUi.copyWith(cameraReady: true);
     CameraHelper.applyExposureValue(cameraUi.exposure);
+    CameraHelper.applyPixelBrightness(state, cameraUi.brightness);
   }
 }

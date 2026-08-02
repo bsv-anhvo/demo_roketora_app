@@ -16,6 +16,7 @@
   "labelVideoResolution": "動画の解像度",
   "labelFrameRate": "フレームレート (FPS)",
   "labelExposure": "露出",
+  "labelBrightness": "明るさ",
   "labelFilter": "フィルター",
   "labelPortrait": "ポートレート",
   "labelResolution": "解像度",

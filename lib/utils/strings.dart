@@ -29,6 +29,7 @@ class Strings {
   static String get labelVideoResolution => _l.labelVideoResolution;
   static String get labelFrameRate => _l.labelFrameRate;
   static String get labelExposure => _l.labelExposure;
+  static String get labelBrightness => _l.labelBrightness;
   static String get labelFilter => _l.labelFilter;
   static String get labelPortrait => _l.labelPortrait;
   static String get labelResolution => _l.labelResolution;

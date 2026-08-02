@@ -81,4 +81,37 @@ class PhotoFilterHelper {
 
     await File(filePath).writeAsBytes(encoded, flush: true);
   }
+
+  /// Applies pixel brightness adj in [-1, 1] (0 = unchanged).
+  static Future<void> applyBrightnessToFile(
+    String filePath,
+    double adj,
+  ) async {
+    final double clamped = adj.clamp(-1.0, 1.0);
+    if (clamped.abs() < 1e-6) return;
+
+    final img.Image image = await _decodeOrientedImage(filePath);
+    final Uint8List pixels = image.getBytes();
+    final int delta = (255 * clamped).round();
+    for (int i = 0; i < pixels.length; i += 4) {
+      pixels[i] = _clampByte(pixels[i] + delta);
+      pixels[i + 1] = _clampByte(pixels[i + 1] + delta);
+      pixels[i + 2] = _clampByte(pixels[i + 2] + delta);
+    }
+
+    final img.Image output = img.Image.fromBytes(
+      width: image.width,
+      height: image.height,
+      bytes: pixels.buffer,
+    );
+
+    final List<int>? encoded = img.encodeNamedImage(filePath, output);
+    if (encoded == null) {
+      throw Exception(Strings.msgDecodeImageFailed(filePath));
+    }
+
+    await File(filePath).writeAsBytes(encoded, flush: true);
+  }
+
+  static int _clampByte(int value) => value.clamp(0, 255);
 }

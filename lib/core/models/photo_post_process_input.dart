@@ -1,4 +1,5 @@
 import 'package:camerawesome/camerawesome_plugin.dart';
+import 'package:demo_roketota_app/utils/constants.dart';
 
 class PhotoPostProcessInput {
   const PhotoPostProcessInput({
@@ -7,6 +8,7 @@ class PhotoPostProcessInput {
     required this.capturedAt,
     required this.activeFilter,
     required this.aspectRatio,
+    this.brightness = Constants.defaultBrightness,
   });
 
   final String originalPath;
@@ -14,4 +16,7 @@ class PhotoPostProcessInput {
   final DateTime capturedAt;
   final AwesomeFilter activeFilter;
   final CameraAspectRatios aspectRatio;
+
+  /// Normalized pixel brightness in [0, 1]; 0.5 is neutral.
+  final double brightness;
 }

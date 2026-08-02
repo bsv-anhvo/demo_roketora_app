@@ -333,18 +333,34 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
   static const double _exposureSlotHeight = 10 + CameraExposure.preferredHeight;
 
   Widget buildExposureSliderSlot() {
+    final bool showExposure = cameraUi.showExposureSlider;
+    final bool showBrightness = cameraUi.showBrightnessSlider;
+    final CameraState? state = _cameraState;
+
     return SizedBox(
       height: _exposureSlotHeight,
-      child: cameraUi.showExposureSlider
+      child: showExposure || showBrightness
           ? Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Gap(10),
-                CameraExposure(
-                  exposure: cameraUi.exposure,
-                  onExposureChanged: (value) => cameraHost.applyExposure(value),
-                  onClose: cameraHost.toggleExposureSlider,
-                ),
+                if (showExposure)
+                  CameraExposure(
+                    exposure: cameraUi.exposure,
+                    onExposureChanged: (value) =>
+                        cameraHost.applyExposure(value),
+                    onClose: cameraHost.toggleExposureSlider,
+                  )
+                else if (showBrightness && state != null)
+                  CameraExposure(
+                    exposure: cameraUi.brightness,
+                    minEv: -1.0,
+                    maxEv: 1.0,
+                    stepEv: 0.1,
+                    onExposureChanged: (value) =>
+                        cameraHost.applyBrightness(state, value),
+                    onClose: cameraHost.toggleBrightnessSlider,
+                  ),
               ],
             )
           : null,

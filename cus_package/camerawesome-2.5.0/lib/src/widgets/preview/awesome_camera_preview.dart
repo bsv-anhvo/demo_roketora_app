@@ -191,14 +191,32 @@ class AwesomeCameraPreviewState extends State<AwesomeCameraPreview> {
                     child: StreamBuilder<AwesomeFilter>(
                       //FIX performances
                       stream: widget.state.filter$,
-                      builder: (context, snapshot) {
-                        return snapshot.hasData &&
-                                snapshot.data != AwesomeFilter.None
-                            ? ColorFiltered(
-                                colorFilter: snapshot.data!.preview,
-                                child: _textures.first,
-                              )
-                            : _textures.first;
+                      builder: (context, filterSnapshot) {
+                        return StreamBuilder<double>(
+                          stream: widget.state.pixelBrightness$,
+                          initialData: widget.state.pixelBrightness,
+                          builder: (context, brightnessSnapshot) {
+                            Widget child = _textures.first;
+                            final AwesomeFilter? filter = filterSnapshot.data;
+                            if (filter != null &&
+                                filter != AwesomeFilter.None) {
+                              child = ColorFiltered(
+                                colorFilter: filter.preview,
+                                child: child,
+                              );
+                            }
+                            final double adj = brightnessSnapshot.data ?? 0;
+                            if (adj.abs() > 1e-6) {
+                              child = ColorFiltered(
+                                colorFilter: ColorFilter.matrix(
+                                  _pixelBrightnessMatrix(adj),
+                                ),
+                                child: child,
+                              );
+                            }
+                            return child;
+                          },
+                        );
                       },
                     ),
                   ),
@@ -269,4 +287,15 @@ class AwesomeCameraPreviewState extends State<AwesomeCameraPreview> {
 
     return previewFrames;
   }
+}
+
+/// Matches photofilters [BrightnessSubFilter] (adj in [-1, 1]).
+List<double> _pixelBrightnessMatrix(double adj) {
+  final double t = 255.0 * adj.clamp(-1.0, 1.0);
+  return <double>[
+    1, 0, 0, 0, t,
+    0, 1, 0, 0, t,
+    0, 0, 1, 0, t,
+    0, 0, 0, 1, 0,
+  ];
 }

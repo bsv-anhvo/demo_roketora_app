@@ -21,8 +21,11 @@ class VideoFilterHelper {
     String filePath,
     AwesomeFilter filter, {
     int? fallbackFps,
+    double brightnessAdj = 0,
   }) async {
-    if (filter.id == AwesomeFilter.None.id) return;
+    final bool hasFilter = filter.id != AwesomeFilter.None.id;
+    final bool hasBrightness = brightnessAdj.abs() >= 1e-6;
+    if (!hasFilter && !hasBrightness) return;
 
     final Directory workDir = Directory(
       '${(await getTemporaryDirectory()).path}/video_filter_${DateTime.now().millisecondsSinceEpoch}',
@@ -68,9 +71,17 @@ class VideoFilterHelper {
         final int end = (index + _frameBatchSize).clamp(0, frames.length);
         final List<File> batch = frames.sublist(index, end);
         await Future.wait<void>(
-          batch.map(
-            (File frame) => PhotoFilterHelper.applyToFile(frame.path, filter),
-          ),
+          batch.map((File frame) async {
+            if (hasFilter) {
+              await PhotoFilterHelper.applyToFile(frame.path, filter);
+            }
+            if (hasBrightness) {
+              await PhotoFilterHelper.applyBrightnessToFile(
+                frame.path,
+                brightnessAdj,
+              );
+            }
+          }),
         );
       }
 

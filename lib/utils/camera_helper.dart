@@ -95,6 +95,31 @@ class CameraHelper {
     return CamerawesomePlugin.setBrightness(value);
   }
 
+  /// Maps UI brightness [0,1] to pixel adj [-1,1]; 0.5 → 0 (unchanged).
+  static double brightnessAdjFromNormalized(double normalized) {
+    return (normalized.clamp(0.0, 1.0) - 0.5) * 2.0;
+  }
+
+  /// ColorMatrix matching [BrightnessSubFilter] / photofilters brightness.
+  static List<double> brightnessColorMatrix(double adj) {
+    final double t = 255.0 * adj.clamp(-1.0, 1.0);
+    return <double>[
+      1, 0, 0, 0, t,
+      0, 1, 0, 0, t,
+      0, 0, 1, 0, t,
+      0, 0, 0, 1, 0,
+    ];
+  }
+
+  static ColorFilter brightnessColorFilter(double adj) {
+    return ColorFilter.matrix(brightnessColorMatrix(adj));
+  }
+
+  /// Pushes pixel brightness onto the live preview (Flutter ColorFiltered).
+  static void applyPixelBrightness(CameraState state, double normalized) {
+    state.setPixelBrightness(brightnessAdjFromNormalized(normalized));
+  }
+
   static Future<void> cameraFocusAtTap({
     required CameraState state,
     required Offset position,

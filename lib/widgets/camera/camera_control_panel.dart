@@ -16,6 +16,7 @@ class CameraControlPanel extends StatelessWidget {
     required this.onFlashTap,
     required this.onTimerTap,
     required this.onExposureTap,
+    required this.onBrightnessTap,
     required this.onResolutionTap,
     this.resolutionLabel,
     this.onFpsTap,
@@ -25,6 +26,7 @@ class CameraControlPanel extends StatelessWidget {
     this.resolutionIcon,
     this.showFilterStrip = false,
     this.showExposureSlider = false,
+    this.showBrightnessSlider = false,
     this.onToggleFilter,
   });
 
@@ -36,10 +38,12 @@ class CameraControlPanel extends StatelessWidget {
   final String? bitrateLabel;
   final bool showFilterStrip;
   final bool showExposureSlider;
+  final bool showBrightnessSlider;
   final VoidCallback onFlashTap;
   final VoidCallback onTimerTap;
   final VoidCallback? onToggleFilter;
   final VoidCallback onExposureTap;
+  final VoidCallback onBrightnessTap;
   final VoidCallback onResolutionTap;
   final VoidCallback? onFpsTap;
   final VoidCallback? onBitrateTap;
@@ -72,6 +76,12 @@ class CameraControlPanel extends StatelessWidget {
                 label: Strings.labelExposure,
                 isActive: showExposureSlider,
                 onTap: onExposureTap,
+              ),
+              _ControlChip(
+                icon: Icons.brightness_6_outlined,
+                label: Strings.labelBrightness,
+                isActive: showBrightnessSlider,
+                onTap: onBrightnessTap,
               ),
               if (isPhotoMode) ...[
                 _ControlChip(

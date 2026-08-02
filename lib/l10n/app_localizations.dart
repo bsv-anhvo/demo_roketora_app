@@ -194,6 +194,12 @@ abstract class AppLocalizations {
   /// **'Exposure'**
   String get labelExposure;
 
+  /// No description provided for @labelBrightness.
+  ///
+  /// In en, this message translates to:
+  /// **'Brightness'**
+  String get labelBrightness;
+
   /// No description provided for @labelFilter.
   ///
   /// In en, this message translates to:

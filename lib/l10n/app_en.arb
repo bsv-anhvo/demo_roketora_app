@@ -16,6 +16,7 @@
   "labelVideoResolution": "Video Resolution",
   "labelFrameRate": "Frame Rate (FPS)",
   "labelExposure": "Exposure",
+  "labelBrightness": "Brightness",
   "labelFilter": "Filter",
   "labelPortrait": "Portrait",
   "labelResolution": "Resolution",

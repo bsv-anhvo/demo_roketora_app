@@ -58,6 +58,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get labelExposure => 'Exposure';
 
   @override
+  String get labelBrightness => 'Brightness';
+
+  @override
   String get labelFilter => 'Filter';
 
   @override

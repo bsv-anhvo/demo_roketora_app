@@ -13,6 +13,7 @@ import 'package:demo_roketota_app/providers/camera/video_record_notifier.dart';
 import 'package:demo_roketota_app/providers/camera/video_record_state.dart';
 import 'package:demo_roketota_app/services/media_capture_metadata_service.dart';
 import 'package:demo_roketota_app/utils/constants.dart';
+import 'package:demo_roketota_app/utils/camera_helper.dart';
 import 'package:demo_roketota_app/utils/media_file_helper.dart';
 import 'package:demo_roketota_app/utils/strings.dart';
 import 'package:demo_roketota_app/utils/video_fps_resolver.dart';
@@ -259,6 +260,9 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
         originalStampPath,
         AwesomeFilter.None,
         fallbackFps: _videoState.videoFps.fps,
+        brightnessAdj: CameraHelper.brightnessAdjFromNormalized(
+          cameraUi.brightness,
+        ),
       );
 
       if (!mounted) return;
@@ -364,6 +368,7 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
             flash: ui.flash,
             timer: PhotoTimerOption.off,
             showExposureSlider: ui.showExposureSlider,
+            showBrightnessSlider: ui.showBrightnessSlider,
             resolutionLabel: video.videoQuality.label,
             fpsLabel: Platform.isIOS ? video.videoFps.label : null,
             bitrateLabel: Platform.isAndroid ? video.videoBitrate.label : null,
@@ -372,6 +377,7 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
               _notifier.applyFlash(state.sensorConfig);
             },
             onExposureTap: _notifier.toggleExposureSlider,
+            onBrightnessTap: _notifier.toggleBrightnessSlider,
             onTimerTap: () {},
             onResolutionTap: pickVideoQuality,
             onFpsTap: Platform.isIOS ? pickVideoFps : null,
