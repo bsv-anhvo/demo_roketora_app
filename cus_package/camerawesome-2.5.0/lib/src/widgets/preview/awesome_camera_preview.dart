@@ -213,9 +213,13 @@ class AwesomeCameraPreviewState extends State<AwesomeCameraPreview> {
                 ),
               if (_preview != null)
                 Positioned.fill(
-                  child: widget.interfaceBuilder(
-                    widget.state,
-                    _preview!,
+                  // App chrome lives outside CameraAwesome; never block preview
+                  // taps / pinch handled by AwesomeCameraGestureDetector.
+                  child: IgnorePointer(
+                    child: widget.interfaceBuilder(
+                      widget.state,
+                      _preview!,
+                    ),
                   ),
                 ),
               // TODO: be draggable

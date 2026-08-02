@@ -18,7 +18,6 @@ import 'package:demo_roketota_app/providers/locale_provider.dart';
 import 'package:demo_roketota_app/utils/constants.dart';
 import 'package:demo_roketota_app/utils/device_requirements.dart';
 import 'package:demo_roketota_app/utils/strings.dart';
-import 'package:demo_roketota_app/widgets/camera/bounded_pinch_zoom_overlay.dart';
 import 'package:demo_roketota_app/widgets/camera/camera_exposure.dart';
 import 'package:demo_roketota_app/widgets/camera/camera_filter_strip.dart';
 import 'package:demo_roketota_app/widgets/camera/camera_focus_indicator.dart';
@@ -69,6 +68,12 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
   /// Latest cover/contain scale from [AnalysisPreview], used to keep the focus
   /// indicator a consistent on-screen size inside InteractiveViewer.
   double _latestPreviewScale = 1.0;
+
+  /// Display zoom at pinch start; multiplied by [ScaleUpdateDetails.scale].
+  double? _pinchStartDisplayZoom;
+  double? _lastPinchDisplayZoom;
+
+  static const double _minPinchDisplayStep = 0.005;
 
   CameraState? _cameraState;
 
@@ -428,16 +433,37 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
 
   Widget _buildPreviewDecorator(CameraState state, AnalysisPreview preview) {
     _latestPreviewScale = preview.scale;
+    // Do not place gesture detectors here: Stack hit-testing would block
+    // tap-to-focus on [AwesomeCameraGestureDetector] underneath.
+    return const SizedBox.shrink();
+  }
 
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        BoundedPinchZoomOverlay(
-          range: cameraUi.zoomRange,
-          displayZoom: cameraUi.displayZoom,
-          onDisplayZoom: (zoom) => cameraHost.applyZoom(state, zoom),
-        ),
-      ],
+  OnPreviewScale _buildPreviewScale(CameraState state) {
+    return OnPreviewScale(
+      onScale: (_) {},
+      onPinchStart: () {
+        _pinchStartDisplayZoom =
+            cameraUi.zoomRange.clampDisplayZoom(cameraUi.displayZoom);
+        _lastPinchDisplayZoom = _pinchStartDisplayZoom;
+      },
+      onPinchUpdate: (scaleFactor) {
+        final double? start = _pinchStartDisplayZoom;
+        if (start == null) return;
+
+        final double target =
+            cameraUi.zoomRange.clampDisplayZoom(start * scaleFactor);
+        if (_lastPinchDisplayZoom != null &&
+            (target - _lastPinchDisplayZoom!).abs() < _minPinchDisplayStep) {
+          return;
+        }
+
+        _lastPinchDisplayZoom = target;
+        cameraHost.applyZoom(state, target);
+      },
+      onPinchEnd: () {
+        _pinchStartDisplayZoom = null;
+        _lastPinchDisplayZoom = null;
+      },
     );
   }
 
@@ -459,8 +485,8 @@ abstract class CameraScreenBaseState<T extends CameraScreenBase>
         theme: AwesomeTheme(
           bottomActionsBackgroundColor: Colors.transparent,
         ),
-        availableFilters: cameraPresetFilters,
-        onPreviewScaleBuilder: (_) => OnPreviewScale(onScale: (_) {}),
+        availableFilters: isPhotoMode ? cameraPresetFilters : const <AwesomeFilter>[],
+        onPreviewScaleBuilder: _buildPreviewScale,
         onPreviewTapBuilder: _buildPreviewTap,
         onMediaCaptureEvent: (event) => handleCaptureEvent(context, event),
         topActionsBuilder: (state) {

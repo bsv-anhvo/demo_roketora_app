@@ -23,19 +23,32 @@ FourCharCode const videoFormat = kCVPixelFormatType_32BGRA;
 # pragma mark - User video interactions
 
 /// Start recording video at given path
-- (void)recordVideoAtPath:(NSString *)path captureDevice:(AVCaptureDevice *)device orientation:(NSInteger)orientation audioSetupCallback:(OnAudioSetup)audioSetupCallback videoWriterCallback:(OnVideoWriterSetup)videoWriterCallback options:(CupertinoVideoOptions *)options quality:(VideoRecordingQuality)quality completion:(nonnull void (^)(FlutterError * _Nullable))completion {
+- (void)recordVideoAtPath:(NSString *)path
+            captureDevice:(AVCaptureDevice *)device
+           captureSession:(AVCaptureSession *)session
+       captureVideoOutput:(AVCaptureVideoDataOutput *)captureVideoOutput
+              orientation:(NSInteger)orientation
+       audioSetupCallback:(OnAudioSetup)audioSetupCallback
+      videoWriterCallback:(OnVideoWriterSetup)videoWriterCallback
+                  options:(CupertinoVideoOptions *)options
+                  quality:(VideoRecordingQuality)quality
+               completion:(nonnull void (^)(FlutterError * _Nullable))completion {
   _options = options;
   _recordingQuality = quality;
   _orientation = orientation;
   _captureDevice = device;
   
-  // custom code - apply format/fps before creating the writer
+  // Apply format/fps before creating the writer
   if (_options && _options.fps != nil && _options.fps > 0) {
-    [self adjustCameraFPS:_options.fps];
+    [self adjustCameraFPS:_options.fps session:session];
   }
   
   // Create audio & video writer
-  if (![self setupWriterForPath:path audioSetupCallback:audioSetupCallback options:options completion:completion]) {
+  if (![self setupWriterForPath:path
+             audioSetupCallback:audioSetupCallback
+                        options:options
+             captureVideoOutput:captureVideoOutput
+                     completion:completion]) {
     completion([FlutterError errorWithCode:@"VIDEO_ERROR" message:@"impossible to write video at path" details:path]);
     return;
   }
@@ -53,7 +66,7 @@ FourCharCode const videoFormat = kCVPixelFormatType_32BGRA;
 - (void)stopRecordingVideo:(nonnull void (^)(NSNumber * _Nullable, FlutterError * _Nullable))completion {
   if (_options && _options.fps != nil && _options.fps > 0) {
     // Reset camera FPS
-    [self adjustCameraFPS:@(30)];
+    [self adjustCameraFPS:@(30) session:nil];
   }
   
   if (_isRecording) {
@@ -83,7 +96,11 @@ FourCharCode const videoFormat = kCVPixelFormatType_32BGRA;
 # pragma mark - Audio & Video writers
 
 /// Setup video channel & write file on path
-- (BOOL)setupWriterForPath:(NSString *)path audioSetupCallback:(OnAudioSetup)audioSetupCallback options:(CupertinoVideoOptions *)options completion:(nonnull void (^)(FlutterError * _Nullable))completion {
+- (BOOL)setupWriterForPath:(NSString *)path
+        audioSetupCallback:(OnAudioSetup)audioSetupCallback
+                   options:(CupertinoVideoOptions *)options
+        captureVideoOutput:(AVCaptureVideoDataOutput *)captureVideoOutput
+                completion:(nonnull void (^)(FlutterError * _Nullable))completion {
   NSError *error = nil;
   NSURL *outputURL;
   if (path != nil) {
@@ -99,20 +116,49 @@ FourCharCode const videoFormat = kCVPixelFormatType_32BGRA;
   AVVideoCodecType codecType = [self getBestCodecTypeAccordingOptions:options];
   AVFileType fileType = [self getBestFileTypeAccordingOptions:options];
   CGSize videoSize = [self getBestVideoSizeAccordingQuality: _recordingQuality];
+  int targetFps = (options && options.fps != nil && [options.fps intValue] > 0)
+                      ? [options.fps intValue]
+                      : 30;
 
-  // custom code - align writer size with the active capture format when possible
+  // Prefer HEVC for UHD / high FPS — hardware encoder handles 4K60 more reliably.
+  BOOL isUhd = (_recordingQuality == VideoRecordingQualityUhd ||
+                _recordingQuality == VideoRecordingQualityHighest);
+  if ((isUhd || targetFps >= 60) && codecType == AVVideoCodecTypeH264) {
+    codecType = AVVideoCodecTypeHEVC;
+  }
+
+  // Align writer size with the active capture format when possible
   if (_captureDevice != nil && _captureDevice.activeFormat != nil) {
     CMVideoDimensions dims = CMVideoFormatDescriptionGetDimensions(_captureDevice.activeFormat.formatDescription);
     if (dims.width > 0 && dims.height > 0) {
       videoSize = CGSizeMake(dims.width, dims.height);
     }
   }
-    
-  NSDictionary *videoSettings = @{
-    AVVideoCodecKey   : codecType,
-    AVVideoWidthKey   : @(videoSize.height),
-    AVVideoHeightKey  : @(videoSize.width),
-  };
+
+  NSDictionary *videoSettings = nil;
+  if (captureVideoOutput != nil) {
+    if (@available(iOS 11.0, *)) {
+      videoSettings = [captureVideoOutput recommendedVideoSettingsForVideoCodecType:codecType
+                                                             assetWriterOutputFileType:fileType];
+    }
+    if (videoSettings == nil) {
+      videoSettings = [captureVideoOutput recommendedVideoSettingsForAssetWriterWithOutputFileType:fileType];
+    }
+  }
+
+  if (videoSettings == nil) {
+    NSInteger bitrate = [self averageBitrateForSize:videoSize fps:targetFps];
+    videoSettings = @{
+      AVVideoCodecKey : codecType,
+      AVVideoWidthKey : @(videoSize.height),
+      AVVideoHeightKey : @(videoSize.width),
+      AVVideoCompressionPropertiesKey : @{
+        AVVideoAverageBitRateKey : @(bitrate),
+        AVVideoExpectedSourceFrameRateKey : @(targetFps),
+        AVVideoMaxKeyFrameIntervalKey : @(targetFps),
+      },
+    };
+  }
   
   _videoWriterInput = [AVAssetWriterInput assetWriterInputWithMediaType:AVMediaTypeVideo outputSettings:videoSettings];
   [_videoWriterInput setTransform:[self getVideoOrientation]];
@@ -135,6 +181,9 @@ FourCharCode const videoFormat = kCVPixelFormatType_32BGRA;
     return NO;
   }
   
+  // Avoid waiting on the session timeline — start writing as soon as samples arrive.
+  _videoWriter.movieFragmentInterval = kCMTimeInvalid;
+
   [_videoWriter addInput:_videoWriterInput];
   
   if (_isAudioEnabled) {
@@ -212,8 +261,8 @@ FourCharCode const videoFormat = kCVPixelFormatType_32BGRA;
 }
 
 /// Adjust video preview & recording to specified FPS
-- (void)adjustCameraFPS:(NSNumber *)fps {
-  // custom code - select a device format that supports target resolution + fps
+- (void)adjustCameraFPS:(NSNumber *)fps session:(AVCaptureSession *)session {
+  // Select a device format that supports target resolution + fps
   if (_captureDevice == nil || fps == nil || [fps intValue] <= 0) {
     return;
   }
@@ -230,8 +279,6 @@ FourCharCode const videoFormat = kCVPixelFormatType_32BGRA;
   AVCaptureDeviceFormat *bestExactFormat = nil;
   AVCaptureDeviceFormat *bestLargeFormat = nil;
   CGFloat bestLargeArea = CGFLOAT_MAX;
-  AVCaptureDeviceFormat *bestFpsFallbackFormat = nil;
-  CGFloat bestFpsFallbackArea = 0;
 
   for (AVCaptureDeviceFormat *format in _captureDevice.formats) {
     CMVideoDimensions dims = CMVideoFormatDescriptionGetDimensions(format.formatDescription);
@@ -250,8 +297,12 @@ FourCharCode const videoFormat = kCVPixelFormatType_32BGRA;
       continue;
     }
 
+    // Only accept formats that can meet the selected resolution.
     BOOL exactMatch = (longer == targetLonger && shorter == targetShorter);
     BOOL largeEnough = (longer >= targetLonger && shorter >= targetShorter);
+    if (!exactMatch && !largeEnough) {
+      continue;
+    }
 
     if (exactMatch && bestExactFormat == nil) {
       bestExactFormat = format;
@@ -261,20 +312,24 @@ FourCharCode const videoFormat = kCVPixelFormatType_32BGRA;
       bestLargeFormat = format;
       bestLargeArea = area;
     }
+  }
 
-    if (area > bestFpsFallbackArea) {
-      bestFpsFallbackFormat = format;
-      bestFpsFallbackArea = area;
+  AVCaptureDeviceFormat *selectedFormat = bestExactFormat ?: bestLargeFormat;
+  if (selectedFormat == nil) {
+    // No format supports both resolution and FPS — keep current format.
+    return;
+  }
+
+  if (session != nil) {
+    [session beginConfiguration];
+    if ([session canSetSessionPreset:AVCaptureSessionPresetInputPriority]) {
+      session.sessionPreset = AVCaptureSessionPresetInputPriority;
     }
   }
 
-  AVCaptureDeviceFormat *selectedFormat =
-      bestExactFormat ?: (bestLargeFormat ?: bestFpsFallbackFormat);
   NSError *error = nil;
   if ([_captureDevice lockForConfiguration:&error]) {
-    if (selectedFormat != nil) {
-      _captureDevice.activeFormat = selectedFormat;
-    }
+    _captureDevice.activeFormat = selectedFormat;
 
     BOOL canSetFps = NO;
     CMTime frameDuration = CMTimeMake(1, targetFps);
@@ -292,6 +347,20 @@ FourCharCode const videoFormat = kCVPixelFormatType_32BGRA;
 
     [_captureDevice unlockForConfiguration];
   }
+
+  if (session != nil) {
+    [session commitConfiguration];
+  }
+}
+
+- (NSInteger)averageBitrateForSize:(CGSize)size fps:(int)fps {
+  CGFloat longer = MAX(size.width, size.height);
+  CGFloat shorter = MIN(size.width, size.height);
+  CGFloat megapixels = (longer * shorter) / 1000000.0;
+  // Scale bitrate with resolution and FPS so the encoder keeps up at 60fps.
+  CGFloat fpsFactor = MAX(fps, 24) / 30.0;
+  NSInteger bitrate = (NSInteger)(megapixels * 2500000.0 * fpsFactor);
+  return MAX(bitrate, 4000000);
 }
 
 # pragma mark - Camera Delegates
@@ -497,7 +566,7 @@ FourCharCode const videoFormat = kCVPixelFormatType_32BGRA;
 
   // Re-apply custom FPS if recording is in progress and custom FPS was specified
   if (_isRecording && _options && _options.fps != nil && _options.fps.intValue > 0) {
-    [self adjustCameraFPS:_options.fps];
+    [self adjustCameraFPS:_options.fps session:nil];
   }
 }
 

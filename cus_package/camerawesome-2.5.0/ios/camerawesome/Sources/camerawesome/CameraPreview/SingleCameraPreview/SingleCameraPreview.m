@@ -9,6 +9,8 @@
 
 @implementation SingleCameraPreview {
   dispatch_queue_t _dispatchQueue;
+  dispatch_queue_t _frameQueue;
+  NSUInteger _previewFrameCounter;
 }
 
 - (instancetype)initWithCameraSensor:(PigeonSensorPosition)sensor
@@ -25,6 +27,11 @@
   
   _completion = completion;
   _dispatchQueue = dispatchQueue;
+  // High-priority serial queue for camera frames (keeps 60fps recording off the main thread).
+  _frameQueue = dispatch_queue_create(
+      "camerawesome.frames",
+      dispatch_queue_attr_make_with_qos_class(DISPATCH_QUEUE_SERIAL, QOS_CLASS_USER_INTERACTIVE, 0));
+  _previewFrameCounter = 0;
   
   _previewTexture = [[CameraPreviewTexture alloc] init];
   
@@ -39,7 +46,7 @@
   _captureVideoOutput = [AVCaptureVideoDataOutput new];
   _captureVideoOutput.videoSettings = @{(NSString*)kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_32BGRA)};
   [_captureVideoOutput setAlwaysDiscardsLateVideoFrames:YES];
-  [_captureVideoOutput setSampleBufferDelegate:self queue:dispatch_get_main_queue()];
+  [_captureVideoOutput setSampleBufferDelegate:self queue:_frameQueue];
   [_captureSession addOutputWithNoConnections:_captureVideoOutput];
   
   [self initCameraPreview:sensor];
@@ -210,6 +217,14 @@
   _currentPreviewSize = [CameraQualities getSizeForPreset:_currentPreset];
 
   [_videoController setPreviewSize:_currentPreviewSize];
+
+  // Apply target FPS early so activeFormat is ready before recording starts.
+  if ((_captureMode == Video || _videoController.isRecording) &&
+      _videoOptions != nil &&
+      _videoOptions.fps != nil &&
+      [_videoOptions.fps intValue] > 0) {
+    [_videoController adjustCameraFPS:_videoOptions.fps session:_captureSession];
+  }
 }
 
 /// Get current video prewiew size
@@ -521,15 +536,21 @@
 /// Record video into the given path
 - (void)recordVideoAtPath:(NSString *)path completion:(nonnull void (^)(FlutterError * _Nullable))completion {
   if (!_videoController.isRecording) {
-    [_videoController recordVideoAtPath:path captureDevice:_captureDevice orientation:_motionController.deviceOrientation audioSetupCallback:^{
+    _previewFrameCounter = 0;
+    [_videoController recordVideoAtPath:path
+                          captureDevice:_captureDevice
+                         captureSession:_captureSession
+                     captureVideoOutput:_captureVideoOutput
+                            orientation:_motionController.deviceOrientation
+                     audioSetupCallback:^{
       [self setUpCaptureSessionForAudioError:^(NSError *error) {
         completion([FlutterError errorWithCode:@"VIDEO_ERROR" message:@"error when trying to setup audio" details:[error localizedDescription]]);
       }];
     } videoWriterCallback:^{
       if (self->_videoController.isAudioEnabled) {
-        [self->_audioOutput setSampleBufferDelegate:self queue:self->_dispatchQueue];
+        [self->_audioOutput setSampleBufferDelegate:self queue:self->_frameQueue];
       }
-      [self->_captureVideoOutput setSampleBufferDelegate:self queue:self->_dispatchQueue];
+      [self->_captureVideoOutput setSampleBufferDelegate:self queue:self->_frameQueue];
       
       completion(nil);
     } options:_videoOptions quality: _recordingQuality completion:completion];
@@ -623,27 +644,42 @@
 
 - (void)captureOutput:(AVCaptureOutput *)output didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *)connection {
   if (output == _captureVideoOutput) {
-    [self.previewTexture updateBuffer:sampleBuffer];
-    if (_onPreviewFrameAvailable) {
-      _onPreviewFrameAvailable();
-    }
-
-    // Send to image stream controller if enabled
-    if (_imageStreamController.streamImages) {
-        [_imageStreamController captureOutput:output didOutputSampleBuffer:sampleBuffer fromConnection:connection orientation:_motionController.deviceOrientation];
-    }
-
-    // Send to video recording controller if recording
+    // Prefer recording path first so writer gets frames before preview work.
     if (_videoController.isRecording) {
-      // Ensure VideoController's captureOutput can handle being called multiple times for the same timestamp (once for video, once for audio)
-      // or ensure it only processes the video buffer here.
-      // Assuming it can differentiate based on 'output' or buffer type.
-      [_videoController captureOutput:output didOutputSampleBuffer:sampleBuffer fromConnection:connection captureVideoOutput:_captureVideoOutput];
+      [_videoController captureOutput:output
+                didOutputSampleBuffer:sampleBuffer
+                       fromConnection:connection
+                   captureVideoOutput:_captureVideoOutput];
+    }
+
+    // Throttle Flutter texture updates while recording high FPS to reduce drops.
+    BOOL shouldUpdatePreview = YES;
+    if (_videoController.isRecording) {
+      _previewFrameCounter += 1;
+      NSInteger targetFps = (_videoOptions.fps != nil) ? [_videoOptions.fps integerValue] : 30;
+      NSUInteger interval = (targetFps >= 60) ? 4 : 2;
+      shouldUpdatePreview = (_previewFrameCounter % interval) == 0;
+    }
+
+    if (shouldUpdatePreview) {
+      [self.previewTexture updateBuffer:sampleBuffer];
+      if (_onPreviewFrameAvailable) {
+        _onPreviewFrameAvailable();
+      }
+    }
+
+    if (_imageStreamController.streamImages) {
+      [_imageStreamController captureOutput:output
+                      didOutputSampleBuffer:sampleBuffer
+                             fromConnection:connection
+                                orientation:_motionController.deviceOrientation];
     }
   } else if (output == _audioOutput) {
-    // Send audio buffers only to video recording controller if recording & audio enabled
     if (_videoController.isRecording && _videoController.isAudioEnabled) {
-      [_videoController captureOutput:output didOutputSampleBuffer:sampleBuffer fromConnection:connection captureVideoOutput:nil]; // Pass nil for video output for audio
+      [_videoController captureOutput:output
+                didOutputSampleBuffer:sampleBuffer
+                       fromConnection:connection
+                   captureVideoOutput:nil];
     }
   }
 }

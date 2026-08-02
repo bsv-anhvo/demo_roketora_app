@@ -60,12 +60,13 @@ class CameraControlPanel extends StatelessWidget {
                 label: flash.label,
                 onTap: onFlashTap,
               ),
-              _ControlChip(
-                icon: Icons.auto_awesome_outlined,
-                label: Strings.labelFilter,
-                isActive: showFilterStrip,
-                onTap: onToggleFilter ?? () {},
-              ),
+              if (isPhotoMode)
+                _ControlChip(
+                  icon: Icons.auto_awesome_outlined,
+                  label: Strings.labelFilter,
+                  isActive: showFilterStrip,
+                  onTap: onToggleFilter ?? () {},
+                ),
               _ControlChip(
                 icon: Icons.exposure_outlined,
                 label: Strings.labelExposure,

@@ -38,7 +38,16 @@ typedef void(^OnVideoWriterSetup)(void);
 @property(assign, nonatomic) CMTime audioTimeOffset;
 
 - (instancetype)init;
-- (void)recordVideoAtPath:(NSString *)path captureDevice:(AVCaptureDevice *)device orientation:(NSInteger)orientation audioSetupCallback:(OnAudioSetup)audioSetupCallback videoWriterCallback:(OnVideoWriterSetup)videoWriterCallback options:(CupertinoVideoOptions *)options quality:(VideoRecordingQuality)quality completion:(nonnull void (^)(FlutterError * _Nullable))completion;
+- (void)recordVideoAtPath:(NSString *)path
+            captureDevice:(AVCaptureDevice *)device
+           captureSession:(AVCaptureSession *)session
+       captureVideoOutput:(AVCaptureVideoDataOutput *)captureVideoOutput
+              orientation:(NSInteger)orientation
+       audioSetupCallback:(OnAudioSetup)audioSetupCallback
+      videoWriterCallback:(OnVideoWriterSetup)videoWriterCallback
+                  options:(CupertinoVideoOptions *)options
+                  quality:(VideoRecordingQuality)quality
+               completion:(nonnull void (^)(FlutterError * _Nullable))completion;
 - (void)stopRecordingVideo:(nonnull void (^)(NSNumber * _Nullable, FlutterError * _Nullable))completion;
 - (void)pauseVideoRecording;
 - (void)resumeVideoRecording;
@@ -49,6 +58,7 @@ typedef void(^OnVideoWriterSetup)(void);
 - (void)setAudioIsDisconnected:(bool)audioIsDisconnected;
 - (void)setPreviewSize:(CGSize)previewSize;
 - (void)updateCaptureDevice:(AVCaptureDevice *)device;
+- (void)adjustCameraFPS:(NSNumber *)fps session:(nullable AVCaptureSession *)session;
 
 @end
 

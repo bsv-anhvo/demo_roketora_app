@@ -57,6 +57,7 @@ dependencies:
   path: ^1.9.1
   native_exif: ^0.8.0
   sqflite_common_ffi: ^2.4.0+3
+  open_filex: ^4.7.0
 
 dev_dependencies:
   flutter_test:

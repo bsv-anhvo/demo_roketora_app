@@ -48,7 +48,8 @@ import UIKit
     channel.setMethodCallHandler { [weak self] call, result in
       switch call.method {
       case "getMaxSupportedFps":
-        result(self?.resolveMaxSupportedFps())
+        let quality = (call.arguments as? [String: Any])?["quality"] as? String
+        result(self?.resolveMaxSupportedFps(quality: quality))
       default:
         result(FlutterMethodNotImplemented)
       }
@@ -84,15 +85,29 @@ import UIKit
     ]
   }
 
-  private func resolveMaxSupportedFps() -> Int {
+  /// Max FPS for formats that can deliver at least the selected quality resolution.
+  private func resolveMaxSupportedFps(quality: String?) -> Int {
     guard
       let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back)
     else {
       return defaultMaxFps
     }
 
+    let target = targetDimensions(for: quality)
     var maxFps = 0.0
+
     for format in device.formats {
+      let dims = CMVideoFormatDescriptionGetDimensions(format.formatDescription)
+      let longer = max(dims.width, dims.height)
+      let shorter = min(dims.width, dims.height)
+
+      if let target {
+        // Require a format that can meet the selected resolution.
+        if longer < target.longer || shorter < target.shorter {
+          continue
+        }
+      }
+
       for range in format.videoSupportedFrameRateRanges {
         maxFps = max(maxFps, range.maxFrameRate)
       }
@@ -103,6 +118,19 @@ import UIKit
     }
 
     return Int(maxFps.rounded(.down))
+  }
+
+  private func targetDimensions(for quality: String?) -> (longer: Int32, shorter: Int32)? {
+    switch quality {
+    case "uhd":
+      return (3840, 2160)
+    case "fhd":
+      return (1920, 1080)
+    case "hd":
+      return (1280, 720)
+    default:
+      return nil
+    }
   }
 
   private func defaultRange() -> [String: String] {

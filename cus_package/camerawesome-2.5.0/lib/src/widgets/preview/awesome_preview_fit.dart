@@ -146,26 +146,30 @@ class PreviewFitWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final transformController = TransformationController()
-      ..value = (Matrix4.identity()..scale(scale));
-
+    // Match InteractiveViewer's layout (OverflowBox + Transform) but without its
+    // opaque ScaleGestureRecognizer, which steals preview taps.
     return Align(
       alignment: alignment,
       child: SizedBox(
         height: previewSize.height * scale,
         child: Padding(
           padding: previewPadding ?? EdgeInsets.zero,
-          child: InteractiveViewer(
-            key: UniqueKey(),
-            transformationController: transformController,
-            scaleEnabled: false,
-            constrained: false,
-            panEnabled: false,
+          child: ClipRect(
             clipBehavior: Clip.antiAlias,
-            child: SizedBox(
-              width: previewSize.width,
-              height: previewSize.height,
-              child: child,
+            child: OverflowBox(
+              alignment: Alignment.topLeft,
+              minWidth: 0.0,
+              minHeight: 0.0,
+              maxWidth: double.infinity,
+              maxHeight: double.infinity,
+              child: Transform(
+                transform: Matrix4.identity()..scaleByDouble(scale, scale, scale, 1),
+                child: SizedBox(
+                  width: previewSize.width,
+                  height: previewSize.height,
+                  child: child,
+                ),
+              ),
             ),
           ),
         ),

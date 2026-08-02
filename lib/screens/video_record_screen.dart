@@ -18,7 +18,6 @@ import 'package:demo_roketota_app/utils/strings.dart';
 import 'package:demo_roketota_app/utils/video_fps_resolver.dart';
 import 'package:demo_roketota_app/utils/video_quality_resolver.dart';
 import 'package:demo_roketota_app/widgets/common/app_camera_capture_button.dart';
-import 'package:demo_roketota_app/widgets/common/app_loading_overlay.dart';
 import 'package:demo_roketota_app/widgets/camera/camera_control_panel.dart';
 import 'package:demo_roketota_app/widgets/media/video_record_elapsed_timer.dart';
 import 'package:flutter/material.dart';
@@ -36,7 +35,6 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
     with SingleTickerProviderStateMixin {
   static const double _holdHintHeight = 18;
 
-  String? _processingMessage;
   bool _isHoldRecording = false;
   bool _isHandlingRecordedVideo = false;
   String? _handledVideoStampPath;
@@ -132,19 +130,21 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
     );
 
     if (picked != null && picked != _videoState.videoQuality) {
-      _notifier.setVideoQuality(picked);
+      await _notifier.setVideoQuality(picked);
     }
   }
 
   Future<void> pickVideoFps() async {
-    final int maxSupportedFps = await VideoFpsResolver.getMaxSupportedFps();
+    final int maxSupportedFps = await VideoFpsResolver.getMaxSupportedFps(
+      quality: _videoState.videoQuality,
+    );
     final List<VideoFpsOption> availableFps = VideoFpsResolver.filterOptions(
       kVideoFpsOptions,
       maxSupportedFps,
     );
 
-    'maxSupportedFps: $maxSupportedFps, availableFps: '
-            '${availableFps.map((o) => o.fps).join(', ')}'
+    'maxSupportedFps: $maxSupportedFps (quality=${_videoState.videoQuality}), '
+            'availableFps: ${availableFps.map((o) => o.fps).join(', ')}'
         .log();
 
     if (!mounted || availableFps.isEmpty) return;
@@ -178,13 +178,8 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
     }
   }
 
-  void _setProcessingMessage(String? message) {
-    if (_processingMessage == message) return;
-    setState(() => _processingMessage = message);
-  }
-
   void _onVideoRecordStop() {
-    // Post-record processing overlay is owned by [_openVideoPreview].
+    // Post-record handling is owned by [_openVideoPreview].
   }
 
   void _stopRecordingIfActive() {
@@ -257,19 +252,12 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
     }
 
     _isHandlingRecordedVideo = true;
-    final AwesomeFilter filter = _notifier.recordingFilterForProcessing();
-    _notifier.clearRecordingFilter();
-
-    final bool needsFilterProcessing = filter.id != AwesomeFilter.None.id;
-    if (needsFilterProcessing) {
-      _setProcessingMessage(Strings.msgProcessingVideo);
-    }
 
     try {
       final String? editedStampPath =
           await MediaFileHelper.createEditedVideoStamp(
         originalStampPath,
-        filter,
+        AwesomeFilter.None,
         fallbackFps: _videoState.videoFps.fps,
       );
 
@@ -290,8 +278,6 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
         originalStampPath: originalStampPath,
       );
 
-      _setProcessingMessage(null);
-
       await openMediaPreview(
         filePath: editedStampPath,
         originalFilePath: originalStampPath,
@@ -307,10 +293,6 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
       );
     } finally {
       _isHandlingRecordedVideo = false;
-      if (mounted) {
-        _setProcessingMessage(null);
-      }
-      await _restoreRecordingFilterIfNeeded();
     }
   }
 
@@ -320,12 +302,6 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
   void onCameraReady(CameraState state) {
     _lastCameraState = state;
     _notifier.onCameraReady(state);
-  }
-
-  Future<void> _restoreRecordingFilterIfNeeded() async {
-    final CameraState? state = _lastCameraState;
-    if (state == null) return;
-    await _notifier.restorePendingFilter(state);
   }
 
   @override
@@ -356,7 +332,6 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
           _openVideoPreview(path, capturedAt: capturedAt);
         }
       case (MediaCaptureStatus.failure, false, true):
-        _setProcessingMessage(null);
         _notifier.clearRecordingCapturedAt();
         _notifier.stopRecordTimer();
         if (mounted) {
@@ -382,17 +357,12 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (ui.showFilterStrip) ...[
-          buildFilterStrip(state),
-          const SizedBox(height: 8),
-        ],
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: CameraControlPanel(
             isPhotoMode: false,
             flash: ui.flash,
             timer: PhotoTimerOption.off,
-            showFilterStrip: ui.showFilterStrip,
             showExposureSlider: ui.showExposureSlider,
             resolutionLabel: video.videoQuality.label,
             fpsLabel: Platform.isIOS ? video.videoFps.label : null,
@@ -401,7 +371,6 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
               _notifier.setFlash(ui.flash.next);
               _notifier.applyFlash(state.sensorConfig);
             },
-            onToggleFilter: _notifier.toggleFilterStrip,
             onExposureTap: _notifier.toggleExposureSlider,
             onTimerTap: () {},
             onResolutionTap: pickVideoQuality,
@@ -418,44 +387,41 @@ class _VideoRecordScreenState extends CameraScreenBaseState<VideoRecordScreen>
   Widget? buildOverlay({double topBarHeight = 0}) {
     final bool isRecording = _videoState.isRecording;
     final bool showRecordFx = _isHoldRecording || isRecording;
-    final String? processingMessage = _processingMessage;
 
-    if (!showRecordFx && processingMessage == null) return null;
+    if (!showRecordFx) return null;
 
     return Stack(
       children: [
-        if (showRecordFx)
-          Positioned.fill(
-            child: IgnorePointer(
-              child: AnimatedBuilder(
-                animation: _recordPulseController,
-                builder: (context, _) {
-                  final double pulse = _recordPulseController.value;
-                  return DecoratedBox(
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: Colors.redAccent.withValues(alpha: 0.35 + pulse * 0.55),
-                        width: 3 + pulse * 2,
-                      ),
+        Positioned.fill(
+          child: IgnorePointer(
+            child: AnimatedBuilder(
+              animation: _recordPulseController,
+              builder: (context, _) {
+                final double pulse = _recordPulseController.value;
+                return DecoratedBox(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: Colors.redAccent.withValues(alpha: 0.35 + pulse * 0.55),
+                      width: 3 + pulse * 2,
                     ),
-                  );
-                },
-              ),
+                  ),
+                );
+              },
             ),
           ),
-        if (processingMessage != null)
-          AppLoadingOverlay(message: processingMessage),
-        if (showRecordFx)
-          Align(
-            alignment: Alignment.topCenter,
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(24, 24 + topBarHeight, 24, 0),
-              child: isRecording ? VideoRecordElapsedTimer(
-                elapsed: _videoState.recordElapsed,
-                maxDuration: Constants.videoRecordMaxDuration,
-              ) : _RecordingPreparingBadge(),
-            ),
+        ),
+        Align(
+          alignment: Alignment.topCenter,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(24, 24 + topBarHeight, 24, 0),
+            child: isRecording
+                ? VideoRecordElapsedTimer(
+                    elapsed: _videoState.recordElapsed,
+                    maxDuration: Constants.videoRecordMaxDuration,
+                  )
+                : _RecordingPreparingBadge(),
           ),
+        ),
       ],
     );
   }

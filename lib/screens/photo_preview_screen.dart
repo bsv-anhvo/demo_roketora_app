@@ -17,6 +17,8 @@ import 'package:demo_roketota_app/widgets/common/app_loading_overlay.dart';
 import 'package:demo_roketota_app/widgets/common/app_top_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
 
 class PhotoPreviewScreen extends StatefulWidget {
   const PhotoPreviewScreen({
@@ -82,6 +84,12 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
       return;
     }
 
+    // Keep a temp copy for the system viewer — saveConfirmedPhoto deletes stamps.
+    final Directory tempDir = await getTemporaryDirectory();
+    final String viewerPath =
+        '${tempDir.path}/roketora_view_${DateTime.now().millisecondsSinceEpoch}.jpg';
+    await File(_filterStampPath).copy(viewerPath);
+
     final bool saved = await MediaFileHelper.saveConfirmedPhoto(
       filterStampPath: _filterStampPath,
       originalStampPath: originalPath,
@@ -91,6 +99,7 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
     setState(() => _isSaving = false);
 
     if (!saved) {
+      await MediaFileHelper.deleteIfExists(viewerPath);
       Strings.msgCouldNotSaveToGallery.showSnackBar(context);
       return;
     }

@@ -1,3 +1,4 @@
+import 'package:camerawesome/pigeon.dart';
 import 'package:demo_roketota_app/core/models/camera_settings.dart';
 import 'package:flutter/services.dart';
 
@@ -11,10 +12,20 @@ class VideoFpsResolver {
 
   static const int _defaultMaxFps = 30;
 
-  /// Returns the highest frame rate the back camera can sustain.
-  static Future<int> getMaxSupportedFps() async {
+  /// Returns the highest frame rate the back camera can sustain at [quality].
+  ///
+  /// When [quality] is set, only formats that meet that resolution are considered
+  /// (e.g. 4K@60 is only reported if a 4K format supports 60fps).
+  static Future<int> getMaxSupportedFps({
+    VideoRecordingQuality? quality,
+  }) async {
     try {
-      final int? result = await _channel.invokeMethod<int>('getMaxSupportedFps');
+      final int? result = await _channel.invokeMethod<int>(
+        'getMaxSupportedFps',
+        <String, dynamic>{
+          if (quality != null) 'quality': _qualityKey(quality),
+        },
+      );
       if (result == null || result <= 0) {
         return _defaultMaxFps;
       }
@@ -39,5 +50,14 @@ class VideoFpsResolver {
     return options
         .where((option) => option.fps <= _defaultMaxFps)
         .toList();
+  }
+
+  static String _qualityKey(VideoRecordingQuality quality) {
+    return switch (quality) {
+      VideoRecordingQuality.uhd || VideoRecordingQuality.highest => 'uhd',
+      VideoRecordingQuality.fhd => 'fhd',
+      VideoRecordingQuality.hd => 'hd',
+      VideoRecordingQuality.sd || VideoRecordingQuality.lowest => 'hd',
+    };
   }
 }
